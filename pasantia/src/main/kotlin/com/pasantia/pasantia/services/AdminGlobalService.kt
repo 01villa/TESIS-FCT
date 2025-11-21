@@ -4,7 +4,12 @@ import com.pasantia.pasantia.dto.admin.CreateAdminForEntityDTO
 import com.pasantia.pasantia.dto.admin.CreateCompanyDTO
 import com.pasantia.pasantia.dto.admin.CreateSchoolDTO
 import com.pasantia.pasantia.dto.CreateUserDTO
+import com.pasantia.pasantia.dto.CompanyDTO
+import com.pasantia.pasantia.dto.SchoolDTO
+import com.pasantia.pasantia.dto.UserDTO
 import com.pasantia.pasantia.entities.*
+import com.pasantia.pasantia.mappers.CompanyMapper
+import com.pasantia.pasantia.mappers.SchoolMapper
 import com.pasantia.pasantia.repositories.*
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
@@ -18,7 +23,8 @@ class AdminGlobalService(
     private val companyAdminRepository: CompanyAdminRepository,
     private val userService: UserService,
     private val roleRepository: RoleRepository,
-    private val userRoleRepository: UserRoleRepository
+    private val userRoleRepository: UserRoleRepository,
+    private val userRepository: UserRepository
 ) {
 
     /** -------------------------
@@ -52,14 +58,13 @@ class AdminGlobalService(
     }
 
     /** -------------------------
-     *  CREAR ADMINISTRADOR DE ESCUELA
+     *  CREAR ADMIN DE ESCUELA
      *  ------------------------- */
     fun createSchoolAdmin(schoolId: UUID, dto: CreateAdminForEntityDTO): User {
 
         val school = schoolRepository.findById(schoolId)
             .orElseThrow { IllegalArgumentException("School not found") }
 
-        // Convertir DTO general → DTO de usuario
         val createUserDTO = CreateUserDTO(
             email = dto.email,
             fullName = dto.fullName,
@@ -68,7 +73,6 @@ class AdminGlobalService(
 
         val user = userService.createUser(createUserDTO)
 
-        // Asignar rol SCHOOL_ADMIN
         val role = roleRepository.findByName("SCHOOL_ADMIN")
             ?: throw IllegalStateException("Role SCHOOL_ADMIN not found")
 
@@ -80,7 +84,6 @@ class AdminGlobalService(
             )
         )
 
-        // Vincular usuario con escuela
         schoolAdminRepository.save(
             SchoolAdmin(
                 school = school,
@@ -93,7 +96,7 @@ class AdminGlobalService(
     }
 
     /** -------------------------
-     *  CREAR ADMINISTRADOR DE EMPRESA
+     *  CREAR ADMIN DE EMPRESA
      *  ------------------------- */
     fun createCompanyAdmin(companyId: UUID, dto: CreateAdminForEntityDTO): User {
 
@@ -128,5 +131,33 @@ class AdminGlobalService(
         )
 
         return user
+    }
+
+    /** -------------------------
+     *  LISTAR ESCUELAS
+     *  ------------------------- */
+    fun listSchools(): List<SchoolDTO> =
+        schoolRepository.findAll().map { SchoolMapper.toDTO(it) }
+
+    /** -------------------------
+     *  LISTAR EMPRESAS
+     *  ------------------------- */
+    fun listCompanies(): List<CompanyDTO> =
+        companyRepository.findAll().map { CompanyMapper.toDTO(it) }
+
+    /** -------------------------
+     *  LISTAR ADMINS DE ESCUELA
+     *  ------------------------- */
+    fun listSchoolAdmins(): List<UserDTO> {
+        val users = userRepository.findSchoolAdmins()
+        return users.map { userService.getUserDTOWithRoles(it) }
+    }
+
+    /** -------------------------
+     *  LISTAR ADMINS DE EMPRESA
+     *  ------------------------- */
+    fun listCompanyAdmins(): List<UserDTO> {
+        val users = userRepository.findCompanyAdmins()
+        return users.map { userService.getUserDTOWithRoles(it) }
     }
 }

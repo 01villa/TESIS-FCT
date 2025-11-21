@@ -5,7 +5,7 @@ import com.pasantia.pasantia.dto.UserDTO
 import com.pasantia.pasantia.entities.User
 import com.pasantia.pasantia.entities.UserRole
 import com.pasantia.pasantia.entities.UserRoleId
-import com.pasantia.pasantia.mappers.toDTO
+import com.pasantia.pasantia.mappers.UserMapper
 import com.pasantia.pasantia.repositories.RoleRepository
 import com.pasantia.pasantia.repositories.UserRepository
 import com.pasantia.pasantia.repositories.UserRoleRepository
@@ -57,6 +57,7 @@ class UserService(
         val roles = userRoleRepository.findByUserId(user.id!!)
             .map { it.role.name }
 
-        return user.toDTO(roles)
+        return UserMapper.toDTO(user, roles)
     }
+
 }

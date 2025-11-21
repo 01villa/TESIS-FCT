@@ -3,12 +3,15 @@ package com.pasantia.pasantia.mappers
 import com.pasantia.pasantia.dto.UserDTO
 import com.pasantia.pasantia.entities.User
 
-fun User.toDTO(roles: List<String>): UserDTO {
-    return UserDTO(
-        id = this.id!!,
-        email = this.email,
-        fullName = this.fullName,
-        status = this.status,
-        roles = roles
+object UserMapper {
+
+    fun toDTO(user: User, roles: List<String>) = UserDTO(
+        id = user.id!!,
+        email = user.email,
+        fullName = user.fullName,
+        status = user.status,
+        roles = roles,
+        createdAt = user.createdAt,
+        updatedAt = user.updatedAt
     )
 }

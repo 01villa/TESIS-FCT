@@ -1,4 +1,4 @@
-package com.pasantia.pasantia.dto.auth
+package com.pasantia.pasantia.dto
 
 import java.util.*
 

@@ -7,6 +7,6 @@ data class SchoolDTO(
     val id: UUID,
     val name: String,
     val address: String?,
-    val createdBy: UUID,
+    val createdBy: String?,
     val createdAt: LocalDateTime?
 )
