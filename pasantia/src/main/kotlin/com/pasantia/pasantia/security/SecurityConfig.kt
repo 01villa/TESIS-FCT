@@ -25,7 +25,16 @@ class SecurityConfig(
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
                 it.requestMatchers("/auth/**").permitAll()
-                it.requestMatchers("/admin/**").hasAuthority("USER")
+
+                // MODULES POR ROL → PRIMERO
+                it.requestMatchers("/school-tutor/**").hasAuthority("SCHOOL_TUTOR")
+                it.requestMatchers("/school-admin/**").hasAuthority("SCHOOL_ADMIN")
+                it.requestMatchers("/company-admin/**").hasAuthority("COMPANY_ADMIN")
+
+                // ADMIN GLOBAL
+                it.requestMatchers("/admin/**").hasAuthority("ADMIN")
+
+                // TODO lo demás
                 it.anyRequest().authenticated()
             }
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter::class.java)

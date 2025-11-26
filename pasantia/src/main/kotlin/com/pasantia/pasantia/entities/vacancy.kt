@@ -1,6 +1,8 @@
 package com.pasantia.pasantia.entities
 
+import com.vladmihalcea.hibernate.type.json.JsonType
 import jakarta.persistence.*
+import org.hibernate.annotations.Type
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
@@ -27,8 +29,9 @@ data class Vacancy(
     @Column(columnDefinition = "TEXT")
     val description: String? = null,
 
-    @Column(columnDefinition = "JSONB")
-    val requirements: String? = null, // JSONB como String
+    @Type(JsonType::class)
+    @Column(columnDefinition = "jsonb")
+    val requirements: List<String>? = null,
 
     @Column(nullable = false)
     val capacity: Int,
@@ -40,8 +43,8 @@ data class Vacancy(
     val endDate: LocalDate,
 
     @Column(nullable = false)
-    val status: Short = 1, // 1 abierta
+    val status: Short = 1,
 
     @Column(nullable = false)
-    val createdAt: LocalDateTime? = LocalDateTime.now()
+    val createdAt: LocalDateTime = LocalDateTime.now()
 )

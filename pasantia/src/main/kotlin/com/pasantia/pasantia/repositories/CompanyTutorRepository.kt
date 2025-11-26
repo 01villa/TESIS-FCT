@@ -5,5 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository
 import java.util.*
 
 interface CompanyTutorRepository : JpaRepository<CompanyTutor, UUID> {
+
     fun findByCompanyId(companyId: UUID): List<CompanyTutor>
+
 }
+

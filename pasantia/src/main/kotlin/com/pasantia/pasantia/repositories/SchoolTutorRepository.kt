@@ -1,9 +1,15 @@
 package com.pasantia.pasantia.repositories
 
+import com.pasantia.pasantia.entities.School
 import com.pasantia.pasantia.entities.SchoolTutor
+import com.pasantia.pasantia.entities.User
 import org.springframework.data.jpa.repository.JpaRepository
-import java.util.*
+import java.util.UUID
 
 interface SchoolTutorRepository : JpaRepository<SchoolTutor, UUID> {
+
+    fun findByUser(user: User): SchoolTutor?
     fun findBySchoolId(schoolId: UUID): List<SchoolTutor>
+    fun findBySchool(school: School): List<SchoolTutor>
+
 }

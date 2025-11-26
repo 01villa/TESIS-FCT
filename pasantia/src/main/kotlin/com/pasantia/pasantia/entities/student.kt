@@ -8,7 +8,8 @@ import java.util.UUID
 @Table(
     name = "students",
     uniqueConstraints = [
-        UniqueConstraint(columnNames = ["ci"])
+        UniqueConstraint(columnNames = ["ci"]),
+        UniqueConstraint(columnNames = ["email"])
     ]
 )
 data class Student(
@@ -34,15 +35,19 @@ data class Student(
     @Column(nullable = false, length = 20, unique = true)
     val ci: String,
 
-    @Column(nullable = false, length = 150)
+    @Column(nullable = false, length = 150, unique = true)
     val email: String,
 
     @Column(length = 20)
     val phone: String? = null,
 
     @Column(nullable = false)
-    val status: Short = 1,
+    val status: Short = 1,  // 1=activo, 0=inactivo
 
     @Column(nullable = false)
-    val createdAt: LocalDateTime? = LocalDateTime.now()
-)
+    val createdAt: LocalDateTime = LocalDateTime.now()
+) {
+
+    // Getter útil para no repetir lógica en servicios/DTOs
+    val fullName: String get() = "$firstName $lastName"
+}

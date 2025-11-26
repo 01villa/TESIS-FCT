@@ -41,4 +41,5 @@ interface UserRepository : JpaRepository<User, UUID> {
         nativeQuery = true
     )
     fun findCompanyAdmins(): List<User>
+
 }
