@@ -9,14 +9,11 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/auth")
 class AuthController(
-    private val authService: AuthService,
-    private val userService: UserService
+    private val authService: AuthService
 ) {
 
     @PostMapping("/login")
-    fun login(@RequestBody req: AuthRequest) = authService.login(req)
-
-    @PostMapping("/register")
-    fun register(@RequestBody dto: CreateUserDTO) =
-        userService.getUserDTOWithRoles(userService.createUser(dto))
+    fun login(@RequestBody req: AuthRequest) =
+        authService.login(req)
 }
+

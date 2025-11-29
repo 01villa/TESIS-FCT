@@ -12,7 +12,6 @@ data class UserRoleId(
     @Column(name = "role_id")
     val roleId: Long
 ) : Serializable
-
 @Entity
 @Table(name = "user_roles")
 data class UserRole(
@@ -25,7 +24,10 @@ data class UserRole(
     @JoinColumn(name = "user_id", nullable = false)
     val user: User,
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    // ******* CAMBIO CRÍTICO AQUÍ *******
+    // Antes: FetchType.LAZY  -> causaba LazyInitializationException
+    // Ahora: FetchType.EAGER -> permite leer role.name en Security
+    @ManyToOne(fetch = FetchType.EAGER)
     @MapsId("roleId")
     @JoinColumn(name = "role_id", nullable = false)
     val role: Role

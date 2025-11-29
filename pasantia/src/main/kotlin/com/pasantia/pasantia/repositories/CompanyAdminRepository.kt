@@ -6,7 +6,12 @@ import org.springframework.data.jpa.repository.JpaRepository
 import java.util.*
 
 interface CompanyAdminRepository : JpaRepository<CompanyAdmin, UUID> {
-    fun findByCompanyId(companyId: UUID): List<CompanyAdmin>
+
     fun findByUser(user: User): CompanyAdmin?
 
+    fun findAllByActiveTrue(): List<CompanyAdmin>
+
+    fun findByIdAndActiveTrue(id: UUID): CompanyAdmin?
+
+    fun findAllByCompanyIdAndActiveTrue(companyId: UUID): List<CompanyAdmin>
 }

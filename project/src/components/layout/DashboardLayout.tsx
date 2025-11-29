@@ -9,7 +9,13 @@ import {
 } from "@chakra-ui/react";
 
 import { Link, Outlet } from "react-router-dom";
-import { FaHome, FaSchool, FaBuilding, FaUsers, FaFileAlt } from "react-icons/fa";
+import {
+  FaHome,
+  FaSchool,
+  FaBuilding,
+  FaUsers,
+  FaFileAlt,
+} from "react-icons/fa";
 
 import { useAuth } from "../../contexts/AuthContext";
 import { MenuItem } from "../../types/menu";
@@ -19,7 +25,8 @@ export default function DashboardLayout() {
 
   // ---------------------------- MENU POR ROL ----------------------------
   const menuItems: Record<string, MenuItem[]> = {
-    USER: [
+    // 🔥 ADMIN DEFINIDO (ANTES NO EXISTÍA Y CAUSABA EL ERROR)
+    ADMIN: [
       { label: "Inicio", icon: FaHome, to: "/dashboard" },
       { label: "Colegios", icon: FaSchool, to: "/dashboard/schools" },
       { label: "Empresas", icon: FaBuilding, to: "/dashboard/companies" },
@@ -36,15 +43,17 @@ export default function DashboardLayout() {
     COMPANY_TUTOR: [
       { label: "Inicio", icon: FaHome, to: "/dashboard" },
       { label: "Vacantes", icon: FaBuilding, to: "/dashboard/vacancies" },
-      { label: "Asignaciones", icon: FaUsers, to: "/dashboard/company-assignments" },
+      {
+        label: "Asignaciones",
+        icon: FaUsers,
+        to: "/dashboard/company-assignments",
+      },
     ],
-
-    
   };
 
-  // SI EL ROL VIENE NULL AL PRINCIPIO, CAE EN USER
-  const safeRole = role ?? "USER";
-  const items = menuItems[safeRole] || menuItems["USER"];
+  // 🔥 Si tu rol es ADMIN pero antes no existía, esto causaba el error de hooks
+  const safeRole = role || "ADMIN"; // ADMIN es tu usuario real
+  const items = menuItems[safeRole] || menuItems["ADMIN"];
 
   const bgSidebar = useColorModeValue("gray.50", "gray.800");
 

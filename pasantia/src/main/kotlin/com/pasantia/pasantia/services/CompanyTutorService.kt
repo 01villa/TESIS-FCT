@@ -1,103 +1,100 @@
 package com.pasantia.pasantia.services
 
-import com.pasantia.pasantia.dto.CompanyTutorDTO
-import com.pasantia.pasantia.dto.CreateCompanyTutorDTO
+import com.pasantia.pasantia.dto.CreateUserDTO
+import com.pasantia.pasantia.dto.company.companytutor.CompanyTutorDTO
+import com.pasantia.pasantia.dto.company.companytutor.CreateCompanyTutorDTO
+import com.pasantia.pasantia.dto.company.companytutor.UpdateCompanyTutorDTO
 import com.pasantia.pasantia.entities.CompanyTutor
 import com.pasantia.pasantia.entities.User
 import com.pasantia.pasantia.entities.UserRole
 import com.pasantia.pasantia.entities.UserRoleId
 import com.pasantia.pasantia.mappers.CompanyTutorMapper
 import com.pasantia.pasantia.repositories.*
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
+import java.util.*
 
 @Service
 class CompanyTutorService(
-    private val userRepository: UserRepository,
-    private val roleRepository: RoleRepository,
-    private val userRoleRepository: UserRoleRepository,
     private val companyTutorRepository: CompanyTutorRepository,
-    private val companyAdminRepository: CompanyAdminRepository,
-    private val passwordEncoder: PasswordEncoder
+    private val companyRepository: CompanyRepository,
+    private val userService: UserService,
+    private val userRepository: UserRepository
 ) {
 
-    /**
-     * Crear tutor empresarial desde el token del Company Admin
-     */
-    fun createTutorForCompanyAdmin(currentUserEmail: String, dto: CreateCompanyTutorDTO): CompanyTutorDTO {
+    @Transactional
+    fun create(companyId: UUID, dto: CreateCompanyTutorDTO): CompanyTutorDTO {
 
-        // 1. Usuario logueado
-        val adminUser = userRepository.findByEmail(currentUserEmail)
-            ?: throw RuntimeException("Usuario no encontrado (token inválido)")
+        val company = companyRepository.findByIdAndActiveTrue(companyId)
+            ?: throw IllegalArgumentException("Company not found or inactive")
 
-        // 2. Buscar su CompanyAdmin
-        val companyAdmin = companyAdminRepository.findByUser(adminUser)
-            ?: throw RuntimeException("Este usuario no es administrador de empresa")
-
-        val company = companyAdmin.company
-
-        // 3. Validar correo único
-        if (userRepository.existsByEmail(dto.email)) {
-            throw RuntimeException("Ya existe un usuario con ese correo")
-        }
-
-        // 4. Crear usuario del tutor
-        val tutorUser = User(
-            email = dto.email,
-            passwordHash = passwordEncoder.encode(dto.password),
-            fullName = dto.fullName,
-            status = 1,
-            createdAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now()
-        )
-        val savedTutorUser = userRepository.save(tutorUser)
-
-        // 5. Asignar rol COMPANY_TUTOR
-        val tutorRole = roleRepository.findByName("COMPANY_TUTOR")
-            ?: throw RuntimeException("Rol COMPANY_TUTOR no existe")
-
-        // Clave compuesta: user_id + role_id
-        val userRoleId = UserRoleId(
-            userId = savedTutorUser.id!!,
-            roleId = tutorRole.id
-        )
-
-        userRoleRepository.save(
-            UserRole(
-                id = userRoleId,
-                user = savedTutorUser,
-                role = tutorRole
+        val userDTO = userService.createUser(
+            CreateUserDTO(
+                email = dto.email,
+                fullName = dto.fullName,
+                password = dto.password,
+                roles = listOf("COMPANY_TUTOR")
             )
         )
 
-        // 6. Crear tutor empresarial
+        val user = userRepository.findById(userDTO.id)
+            .orElseThrow { IllegalArgumentException("User not found after creation") }
+
         val tutor = CompanyTutor(
             company = company,
-            user = savedTutorUser,
-            phone = dto.phone
+            user = user,
+            phone = dto.phone,
+            active = true,
+            deletedAt = null
         )
 
-        val savedTutor = companyTutorRepository.save(tutor)
-
-        // 7. Convertir a DTO PARA EVITAR LAZY LOADING
-        return CompanyTutorMapper.toDTO(savedTutor)
+        return CompanyTutorMapper.toDTO(companyTutorRepository.save(tutor))
     }
 
-    /**
-     * Listar todos los tutores de la empresa del admin logueado
-     */
-    fun listTutorsForCompanyAdmin(currentUserEmail: String): List<CompanyTutorDTO> {
+    fun list(): List<CompanyTutorDTO> =
+        companyTutorRepository.findAllByActiveTrue()
+            .map { CompanyTutorMapper.toDTO(it) }
 
-        val adminUser = userRepository.findByEmail(currentUserEmail)
-            ?: throw RuntimeException("Usuario no encontrado")
+    fun listByCompany(companyId: UUID): List<CompanyTutorDTO> =
+        companyTutorRepository.findAllByCompanyIdAndActiveTrue(companyId)
+            .map { CompanyTutorMapper.toDTO(it) }
 
-        val companyAdmin = companyAdminRepository.findByUser(adminUser)
-            ?: throw RuntimeException("No es administrador de empresa")
+    fun get(id: UUID): CompanyTutorDTO {
+        val tutor = companyTutorRepository.findByIdAndActiveTrue(id)
+            ?: throw IllegalArgumentException("CompanyTutor not found or inactive")
 
-        val tutors = companyTutorRepository.findByCompanyId(companyAdmin.company.id!!)
+        return CompanyTutorMapper.toDTO(tutor)
+    }
 
-        // Convertimos a DTO para evitar errores de serialización
-        return tutors.map { CompanyTutorMapper.toDTO(it) }
+    @Transactional
+    fun update(id: UUID, dto: UpdateCompanyTutorDTO): CompanyTutorDTO {
+        val tutor = companyTutorRepository.findByIdAndActiveTrue(id)
+            ?: throw IllegalArgumentException("CompanyTutor not found or inactive")
+
+        dto.phone?.let { tutor.phone = it }
+        tutor.updatedAt = LocalDateTime.now()
+
+        companyTutorRepository.save(tutor)
+        return CompanyTutorMapper.toDTO(tutor)
+    }
+
+    fun softDelete(id: UUID) {
+        val tutor = companyTutorRepository.findByIdAndActiveTrue(id)
+            ?: throw IllegalArgumentException("CompanyTutor not found or already inactive")
+
+        tutor.active = false
+        tutor.deletedAt = LocalDateTime.now()
+        companyTutorRepository.save(tutor)
+    }
+
+    fun restore(id: UUID) {
+        val tutor = companyTutorRepository.findById(id)
+            .orElseThrow { IllegalArgumentException("CompanyTutor not found") }
+
+        tutor.active = true
+        tutor.deletedAt = null
+        companyTutorRepository.save(tutor)
     }
 }

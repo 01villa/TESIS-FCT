@@ -4,17 +4,16 @@ import com.pasantia.pasantia.dto.student.StudentDTO
 import com.pasantia.pasantia.entities.Student
 
 object StudentMapper {
-
-    fun toDTO(student: Student): StudentDTO =
-        StudentDTO(
-            id = student.id,
-            firstName = student.firstName,
-            lastName = student.lastName,
-            fullName = student.fullName,
-            ci = student.ci,
-            email = student.email,
-            phone = student.phone,
-            status = student.status,
-            schoolId = student.school.id!!
-        )
+    fun toDTO(s: Student) = StudentDTO(
+        id = s.id,
+        schoolId = s.school.id,
+        userId = s.user.id!!,
+        fullName = s.fullName,
+        ci = s.ci,
+        phone = s.phone,
+        active = s.active,
+        deletedAt = s.deletedAt,
+        createdAt = s.createdAt,
+        updatedAt = s.updatedAt
+    )
 }

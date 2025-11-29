@@ -1,8 +1,8 @@
-package com.pasantia.pasantia.dto
+package com.pasantia.pasantia.dto.vacancy
 
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.*
+import java.util.UUID
 
 data class VacancyDTO(
     val id: UUID,
@@ -14,5 +14,8 @@ data class VacancyDTO(
     val startDate: LocalDate,
     val endDate: LocalDate,
     val status: Short,
-    val createdAt: LocalDateTime?
+    val active: Boolean,
+    val deletedAt: LocalDateTime?,
+    val createdAt: LocalDateTime?,
+    val updatedAt: LocalDateTime?
 )

@@ -1,15 +1,20 @@
 package com.pasantia.pasantia.entities
 
+import com.pasantia.pasantia.common.SoftDeletable
 import jakarta.persistence.*
+import org.springframework.data.annotation.CreatedBy
+import org.springframework.data.annotation.CreatedDate
+import org.springframework.data.annotation.LastModifiedDate
+import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.LocalDateTime
-import java.util.UUID
+import java.util.*
 
 @Entity
+@EntityListeners(AuditingEntityListener::class)
 @Table(
     name = "students",
     uniqueConstraints = [
-        UniqueConstraint(columnNames = ["ci"]),
-        UniqueConstraint(columnNames = ["email"])
+        UniqueConstraint(columnNames = ["ci"])
     ]
 )
 data class Student(
@@ -18,36 +23,47 @@ data class Student(
     @Column(nullable = false)
     val id: UUID = UUID.randomUUID(),
 
+    // Student → School
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "school_id", nullable = false)
-    val school: School,
+    var school: School,
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by", nullable = false)
-    val createdBy: User,  // tutor de escuela
-
-    @Column(nullable = false, length = 80)
-    val firstName: String,
+    // Student → User (LOGIN)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    var user: User,
 
     @Column(nullable = false, length = 80)
-    val lastName: String,
+    var firstName: String,
+
+    @Column(nullable = false, length = 80)
+    var lastName: String,
 
     @Column(nullable = false, length = 20, unique = true)
-    val ci: String,
-
-    @Column(nullable = false, length = 150, unique = true)
-    val email: String,
+    var ci: String,
 
     @Column(length = 20)
-    val phone: String? = null,
+    var phone: String? = null,
 
+    // Soft delete
     @Column(nullable = false)
-    val status: Short = 1,  // 1=activo, 0=inactivo
+    override var active: Boolean = true,
 
-    @Column(nullable = false)
-    val createdAt: LocalDateTime = LocalDateTime.now()
-) {
+    @Column
+    override var deletedAt: LocalDateTime? = null,
 
-    // Getter útil para no repetir lógica en servicios/DTOs
+    // Auditoría
+    @CreatedBy
+    @Column(name = "created_by")
+    var createdBy: String? = null,
+
+    @CreatedDate
+    var createdAt: LocalDateTime? = null,
+
+    @LastModifiedDate
+    var updatedAt: LocalDateTime? = null
+
+) : SoftDeletable {
+
     val fullName: String get() = "$firstName $lastName"
 }

@@ -1,10 +1,15 @@
 package com.pasantia.pasantia.entities
 
+import com.pasantia.pasantia.common.SoftDeletable
 import jakarta.persistence.*
+import org.springframework.data.annotation.CreatedDate
+import org.springframework.data.annotation.LastModifiedDate
+import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.LocalDateTime
 import java.util.UUID
 
 @Entity
+@EntityListeners(AuditingEntityListener::class)
 @Table(name = "applications")
 data class Application(
 
@@ -14,29 +19,43 @@ data class Application(
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vacancy_id", nullable = false)
-    val vacancy: Vacancy,
+    var vacancy: Vacancy,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
-    val student: Student,
+    var student: Student,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "school_tutor_id", nullable = false)
-    val schoolTutor: User,
+    var schoolTutor: User,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_tutor_id")
-    val companyTutor: User? = null,
+    var companyTutor: User? = null,
 
+    // 1 = asignado por tutor escolar / pendiente empresa
+    // 2 = aprobado por tutor de empresa
+    // 3 = rechazado por tutor de empresa
     @Column(nullable = false)
-    val status: Short = 1, // 1 asignado por tutor escolar, 2 aprobado, 3 rechazado
+    var status: Short = 1,
 
     @Column(columnDefinition = "TEXT")
-    val notes: String? = null,
+    var notes: String? = null,
 
+    // ---------- Soft delete ----------
     @Column(nullable = false)
-    val appliedAt: LocalDateTime = LocalDateTime.now(),
+    override var active: Boolean = true,
 
-    @Column(nullable = false)
-    val updatedAt: LocalDateTime = LocalDateTime.now()
-)
+    @Column
+    override var deletedAt: LocalDateTime? = null,
+
+    // ---------- Auditoría ----------
+    @CreatedDate
+    @Column(nullable = true, updatable = false)
+    var appliedAt: LocalDateTime? = null,
+
+    @LastModifiedDate
+    @Column(nullable = true)
+    var updatedAt: LocalDateTime? = null
+
+) : SoftDeletable

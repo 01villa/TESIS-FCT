@@ -5,22 +5,22 @@ import com.pasantia.pasantia.entities.Application
 
 object ApplicationMapper {
 
-    fun toDTO(entity: Application): ApplicationDTO =
-        ApplicationDTO(
-            id = entity.id,
-            vacancyId = entity.vacancy.id,
-            vacancyTitle = entity.vacancy.title,
-            companyId = entity.vacancy.company.id!!,
-            companyName = entity.vacancy.company.name, // ajusta si el campo se llama distinto
-            studentId = entity.student.id!!,
-            studentFullName = entity.student.fullName,
-            schoolTutorId = entity.schoolTutor.id!!,
-            schoolTutorName = entity.schoolTutor.fullName,
-            companyTutorId = entity.companyTutor?.id,
-            companyTutorName = entity.companyTutor?.fullName,
-            status = entity.status,
-            notes = entity.notes,
-            appliedAt = entity.appliedAt,
-            updatedAt = entity.updatedAt
-        )
+    fun toDTO(a: Application) = ApplicationDTO(
+        id = a.id,
+        vacancyId = a.vacancy.id,
+        vacancyTitle = a.vacancy.title,
+        companyId = a.vacancy.company.id,
+        companyName = a.vacancy.company.name,
+        studentId = a.student.id,
+        studentFullName = a.student.fullName,
+        schoolTutorId = a.schoolTutor.id!!,
+        schoolTutorName = a.schoolTutor.fullName,
+        companyTutorId = a.companyTutor?.id,
+        companyTutorName = a.companyTutor?.fullName,
+        status = a.status,
+        notes = a.notes,
+        active = a.active,
+        appliedAt = a.appliedAt,
+        updatedAt = a.updatedAt
+    )
 }

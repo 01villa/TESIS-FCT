@@ -7,13 +7,8 @@ import ProtectedRoute from "../router/ProtectedRoute";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import DashboardHome from "../pages/dashboard/DashboardHome";
 
-// Más adelante agregaremos tus módulos
-// import SchoolsList from "../modules/admin/SchoolsList";
-// import CompaniesList from "../modules/admin/CompaniesList";
-// import AssignmentsList from "../modules/school-tutor/AssignmentsList";
-// import CreateAssignment from "../modules/school-tutor/CreateAssignment";
-// import VacanciesList from "../modules/company/VacanciesList";
-// import VacanciesAvailable from "../modules/student/VacanciesAvailable";
+// 🔥 Importar UsersPage
+import UsersPage from "../pages/users/UsersPage";
 
 export default function AppRouter() {
   return (
@@ -25,20 +20,23 @@ export default function AppRouter() {
 
         {/* LOGIN */}
         <Route path="/login" element={<Login />} />
-       
-          {/* DASHBOARD PROTEGIDO */}
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<DashboardHome />} />
-      </Route>
 
-        {/* MÁS RUTAS LUEGO */}
+        {/* DASHBOARD PROTEGIDO */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          {/* Home del dashboard */}
+          <Route index element={<DashboardHome />} />
+
+          {/* 🔥 Aquí se expone tu CRUD de admins */}
+          <Route path="users" element={<UsersPage />} />
+
+        </Route>
 
         {/* 404 */}
         <Route path="*" element={<h2>Página no encontrada</h2>} />

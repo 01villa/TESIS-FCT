@@ -2,172 +2,170 @@ package com.pasantia.pasantia.services
 
 import com.pasantia.pasantia.dto.application.ApplicationDTO
 import com.pasantia.pasantia.dto.application.CreateAssignmentDTO
-import com.pasantia.pasantia.dto.application.UpdateApplicationStatusDTO
 import com.pasantia.pasantia.entities.Application
 import com.pasantia.pasantia.mappers.ApplicationMapper
 import com.pasantia.pasantia.repositories.*
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
-import java.util.UUID
+import java.util.*
 
 @Service
 class ApplicationService(
     private val applicationRepository: ApplicationRepository,
-    private val userRepository: UserRepository,
-    private val studentRepository: StudentRepository,
     private val vacancyRepository: VacancyRepository,
-    private val companyAdminRepository: CompanyAdminRepository
+    private val studentRepository: StudentRepository,
+    private val userRepository: UserRepository,
+    private val companyTutorRepository: CompanyTutorRepository
 ) {
 
-    /**
-     * Tutor de escuela asigna un estudiante a una vacante.
-     */
+    // ======================================================
+    // 1) Asignar estudiante a vacante (Tutor Escolar)
+    // ======================================================
+    @Transactional
     fun assignStudentToVacancy(
-        currentUserEmail: String,
+        schoolTutorEmail: String,
         dto: CreateAssignmentDTO
     ): ApplicationDTO {
 
-        val tutorUser = userRepository.findByEmail(currentUserEmail)
-            ?: throw RuntimeException("Usuario (tutor) no encontrado")
+        val schoolTutor = userRepository.findByEmailAndActiveTrue(schoolTutorEmail)
+            ?: throw IllegalArgumentException("School tutor not found")
+
+        val vacancy = vacancyRepository.findByIdAndActiveTrue(dto.vacancyId)
+            ?: throw IllegalArgumentException("Vacancy not found or inactive")
 
         val student = studentRepository.findById(dto.studentId)
-            .orElseThrow { RuntimeException("Estudiante no encontrado") }
+            .orElseThrow { IllegalArgumentException("Student not found") }
 
-        val vacancy = vacancyRepository.findById(dto.vacancyId)
-            .orElseThrow { RuntimeException("Vacante no encontrada") }
+        // Evita duplicar asignaciones activas
+        if (applicationRepository.existsByStudentIdAndVacancyIdAndActiveTrue(student.id, vacancy.id)) {
+            throw IllegalArgumentException("Student is already assigned to this vacancy")
+        }
 
-        // TODO: validar que el tutor pertenece a la misma escuela que el estudiante
-        // TODO: validar que la vacante está abierta y tiene cupo
-
-        val application = Application(
+        val app = Application(
             vacancy = vacancy,
             student = student,
-            schoolTutor = tutorUser,
-            status = 1, // 1 = asignado por tutor escolar
+            schoolTutor = schoolTutor,
+            companyTutor = null,
+            status = 1,
             notes = dto.notes,
-            appliedAt = LocalDateTime.now(),
-            updatedAt = LocalDateTime.now()
+            active = true,
+            deletedAt = null
         )
 
-        val saved = applicationRepository.save(application)
-        return ApplicationMapper.toDTO(saved)
+        return ApplicationMapper.toDTO(applicationRepository.save(app))
     }
 
-    /**
-     * Listar asignaciones que creó el tutor de escuela logueado.
-     */
-    fun listForSchoolTutor(currentUserEmail: String): List<ApplicationDTO> {
-        val tutorUser = userRepository.findByEmail(currentUserEmail)
-            ?: throw RuntimeException("Usuario (tutor) no encontrado")
+    // ======================================================
+    // 2) Listar asignaciones para tutor escolar
+    // ======================================================
+    fun listForSchoolTutor(email: String): List<ApplicationDTO> =
+        applicationRepository.findAllBySchoolTutorEmailAndActiveTrue(email)
+            .map { ApplicationMapper.toDTO(it) }
 
-        val applications = applicationRepository.findBySchoolTutor(tutorUser)
-        return applications.map { ApplicationMapper.toDTO(it) }
+    // ======================================================
+    // 3) Listar asignaciones para tutor de empresa (todas de su empresa)
+    // ======================================================
+    fun listForCompanyTutor(email: String): List<ApplicationDTO> {
+
+        val tutorUser = userRepository.findByEmailAndActiveTrue(email)
+            ?: throw IllegalArgumentException("Tutor not found")
+
+        val companyTutor = companyTutorRepository.findByUser(tutorUser)
+            ?: throw IllegalArgumentException("Tutor is not assigned to any company")
+
+        val apps = applicationRepository
+            .findAllByVacancyCompanyIdAndActiveTrue(companyTutor.company.id)
+
+        return apps.map { ApplicationMapper.toDTO(it) }
     }
 
-    /**
-     * Listar asignaciones de todas las vacantes de la empresa del company admin.
-     */
-    fun listForCompanyAdmin(currentUserEmail: String): List<ApplicationDTO> {
-        val adminUser = userRepository.findByEmail(currentUserEmail)
-            ?: throw RuntimeException("Usuario no encontrado")
+    // ======================================================
+    // 4) Aprobación por tutor de empresa
+    // ======================================================
+    @Transactional
+    fun approveByCompanyTutor(applicationId: UUID, companyTutorEmail: String): ApplicationDTO {
 
-        val companyAdmin = companyAdminRepository.findByUser(adminUser)
-            ?: throw RuntimeException("El usuario no es administrador de empresa")
+        val app = applicationRepository.findByIdAndActiveTrue(applicationId)
+            ?: throw IllegalArgumentException("Application not found or inactive")
 
-        val companyId = companyAdmin.company.id
-            ?: throw RuntimeException("Empresa sin ID")
+        val tutorUser = userRepository.findByEmailAndActiveTrue(companyTutorEmail)
+            ?: throw IllegalArgumentException("Company tutor not found")
 
-        val applications = applicationRepository.findByVacancyCompanyId(companyId)
-        return applications.map { ApplicationMapper.toDTO(it) }
-    }
+        val companyTutor = companyTutorRepository.findByUser(tutorUser)
+            ?: throw IllegalArgumentException("Tutor does not belong to any company")
 
-    /**
-     * Obtener una asignación, validando que pertenezca a la empresa del admin.
-     */
-    fun getForCompanyAdmin(currentUserEmail: String, applicationId: UUID): ApplicationDTO {
-        val adminUser = userRepository.findByEmail(currentUserEmail)
-            ?: throw RuntimeException("Usuario no encontrado")
-
-        val companyAdmin = companyAdminRepository.findByUser(adminUser)
-            ?: throw RuntimeException("El usuario no es administrador de empresa")
-
-        val application = applicationRepository.findById(applicationId)
-            .orElseThrow { RuntimeException("Asignación no encontrada") }
-
-        if (application.vacancy.company.id != companyAdmin.company.id) {
-            throw RuntimeException("No tiene acceso a esta asignación")
+        // Validación para evitar aprobar aplicaciones de otras empresas
+        if (app.vacancy.company.id != companyTutor.company.id) {
+            throw IllegalAccessException("You cannot approve applications from another company")
         }
 
-        return ApplicationMapper.toDTO(application)
+        app.companyTutor = tutorUser
+        app.status = 2
+        app.updatedAt = LocalDateTime.now()
+
+        return ApplicationMapper.toDTO(applicationRepository.save(app))
     }
 
-    /**
-     * Aprobar una asignación (empresa).
-     */
-    fun approveApplication(
-        currentUserEmail: String,
-        applicationId: UUID,
-        dto: UpdateApplicationStatusDTO?
-    ): ApplicationDTO {
+    // ======================================================
+    // 5) Rechazo por tutor de empresa
+    // ======================================================
+    @Transactional
+    fun rejectByCompanyTutor(applicationId: UUID, companyTutorEmail: String, notes: String?): ApplicationDTO {
 
-        val adminUser = userRepository.findByEmail(currentUserEmail)
-            ?: throw RuntimeException("Usuario no encontrado")
+        val app = applicationRepository.findByIdAndActiveTrue(applicationId)
+            ?: throw IllegalArgumentException("Application not found or inactive")
 
-        val companyAdmin = companyAdminRepository.findByUser(adminUser)
-            ?: throw RuntimeException("El usuario no es administrador de empresa")
+        val tutorUser = userRepository.findByEmailAndActiveTrue(companyTutorEmail)
+            ?: throw IllegalArgumentException("Company tutor not found")
 
-        val application = applicationRepository.findById(applicationId)
-            .orElseThrow { RuntimeException("Asignación no encontrada") }
+        val companyTutor = companyTutorRepository.findByUser(tutorUser)
+            ?: throw IllegalArgumentException("Tutor does not belong to any company")
 
-        if (application.vacancy.company.id != companyAdmin.company.id) {
-            throw RuntimeException("No tiene acceso a esta asignación")
+        if (app.vacancy.company.id != companyTutor.company.id) {
+            throw IllegalAccessException("You cannot reject applications from another company")
         }
 
-        val companyTutor = dto?.companyTutorId?.let { tutorId ->
-            userRepository.findById(tutorId)
-                .orElseThrow { RuntimeException("Tutor de empresa no encontrado") }
-        }
+        app.companyTutor = tutorUser
+        app.status = 3
+        app.notes = notes
+        app.updatedAt = LocalDateTime.now()
 
-        val updated = application.copy(
-            status = 2, // 2 = aprobado por empresa
-            companyTutor = companyTutor ?: application.companyTutor,
-            notes = dto?.notes ?: application.notes,
-            updatedAt = LocalDateTime.now()
-        )
-
-        val saved = applicationRepository.save(updated)
-        return ApplicationMapper.toDTO(saved)
+        return ApplicationMapper.toDTO(applicationRepository.save(app))
     }
 
-    /**
-     * Rechazar una asignación (empresa).
-     */
-    fun rejectApplication(
-        currentUserEmail: String,
-        applicationId: UUID,
-        dto: UpdateApplicationStatusDTO?
-    ): ApplicationDTO {
+    // ======================================================
+    // 6) Listar asignaciones para estudiante
+    // ======================================================
+    fun listForStudent(studentId: UUID): List<ApplicationDTO> =
+        applicationRepository.findAllByStudentIdAndActiveTrue(studentId)
+            .map { ApplicationMapper.toDTO(it) }
 
-        val adminUser = userRepository.findByEmail(currentUserEmail)
-            ?: throw RuntimeException("Usuario no encontrado")
+    // ======================================================
+    // 7) Soft delete
+    // ======================================================
+    @Transactional
+    fun softDelete(id: UUID) {
+        val app = applicationRepository.findByIdAndActiveTrue(id)
+            ?: throw IllegalArgumentException("Application not found or already inactive")
 
-        val companyAdmin = companyAdminRepository.findByUser(adminUser)
-            ?: throw RuntimeException("El usuario no es administrador de empresa")
+        app.active = false
+        app.deletedAt = LocalDateTime.now()
 
-        val application = applicationRepository.findById(applicationId)
-            .orElseThrow { RuntimeException("Asignación no encontrada") }
+        applicationRepository.save(app)
+    }
 
-        if (application.vacancy.company.id != companyAdmin.company.id) {
-            throw RuntimeException("No tiene acceso a esta asignación")
-        }
+    // ======================================================
+    // 8) Restore
+    // ======================================================
+    @Transactional
+    fun restore(id: UUID) {
+        val app = applicationRepository.findById(id)
+            .orElseThrow { IllegalArgumentException("Application not found") }
 
-        val updated = application.copy(
-            status = 3, // 3 = rechazado por empresa
-            notes = dto?.notes ?: application.notes,
-            updatedAt = LocalDateTime.now()
-        )
+        app.active = true
+        app.deletedAt = null
 
-        val saved = applicationRepository.save(updated)
-        return ApplicationMapper.toDTO(saved)
+        applicationRepository.save(app)
     }
 }

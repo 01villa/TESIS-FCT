@@ -9,12 +9,21 @@ import java.util.*
 @Repository
 interface UserRepository : JpaRepository<User, UUID> {
 
+    /** ============================
+     *  Búsquedas estándar
+     *  ============================ */
+
     fun findByEmail(email: String): User?
+    fun findByEmailAndActiveTrue(email: String): User?
     fun existsByEmail(email: String): Boolean
 
-    /** -----------------------------
-     *  ADMINS DE ESCUELA
-     *  ----------------------------- */
+    fun findAllByActiveTrue(): List<User>
+    fun findByIdAndActiveTrue(id: UUID): User?
+
+
+    /** ============================
+     *  ADMINS DE ESCUELA (solo activos)
+     *  ============================ */
     @Query(
         value = """
         SELECT u.*
@@ -22,14 +31,16 @@ interface UserRepository : JpaRepository<User, UUID> {
         JOIN user_roles ur ON ur.user_id = u.id
         JOIN roles r ON r.id = ur.role_id
         WHERE r.name = 'SCHOOL_ADMIN'
+        AND u.active = true
         """,
         nativeQuery = true
     )
     fun findSchoolAdmins(): List<User>
 
-    /** -----------------------------
-     *  ADMINS DE EMPRESA
-     *  ----------------------------- */
+
+    /** ============================
+     *  ADMINS DE EMPRESA (solo activos)
+     *  ============================ */
     @Query(
         value = """
         SELECT u.*
@@ -37,9 +48,9 @@ interface UserRepository : JpaRepository<User, UUID> {
         JOIN user_roles ur ON ur.user_id = u.id
         JOIN roles r ON r.id = ur.role_id
         WHERE r.name = 'COMPANY_ADMIN'
+        AND u.active = true
         """,
         nativeQuery = true
     )
     fun findCompanyAdmins(): List<User>
-
 }

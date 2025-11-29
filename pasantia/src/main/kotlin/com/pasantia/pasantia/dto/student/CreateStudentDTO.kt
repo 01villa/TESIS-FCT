@@ -5,5 +5,6 @@ data class CreateStudentDTO(
     val lastName: String,
     val ci: String,
     val email: String,
+    val password: String,
     val phone: String?
 )

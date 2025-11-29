@@ -15,15 +15,27 @@ class AuthService(
 ) {
 
     fun login(request: AuthRequest): AuthResponse {
-        val auth = UsernamePasswordAuthenticationToken(request.email, request.password)
-        authenticationManager.authenticate(auth)
+
+        val authenticationToken =
+            UsernamePasswordAuthenticationToken(request.email, request.password)
+
+        authenticationManager.authenticate(authenticationToken)
 
         val user = userService.findByEmail(request.email)
             ?: throw IllegalArgumentException("User not found")
 
         val dto = userService.getUserDTOWithRoles(user)
-        val token = jwtTokenProvider.generateToken(dto)
 
-        return AuthResponse(token, dto)
+        val token = jwtTokenProvider.generateToken(
+            email = dto.email,
+            roles = dto.roles,
+            userId = dto.id
+        )
+
+        return AuthResponse(
+            token = token,
+            user = dto
+        )
     }
+
 }

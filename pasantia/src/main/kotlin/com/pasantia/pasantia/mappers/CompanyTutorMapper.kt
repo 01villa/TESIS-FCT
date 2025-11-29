@@ -1,17 +1,21 @@
 package com.pasantia.pasantia.mappers
 
-import com.pasantia.pasantia.dto.CompanyTutorDTO
+import com.pasantia.pasantia.dto.company.companytutor.CompanyTutorDTO
 import com.pasantia.pasantia.entities.CompanyTutor
 
 object CompanyTutorMapper {
 
-    fun toDTO(entity: CompanyTutor): CompanyTutorDTO =
-        CompanyTutorDTO(
-            id = entity.id.toString(),
-            fullName = entity.user.fullName,
-            email = entity.user.email,
-            phone = entity.phone,
-            companyId = entity.company.id.toString(),
-            userId = entity.user.id.toString()
-        )
+    fun toDTO(tutor: CompanyTutor) = CompanyTutorDTO(
+        id = tutor.id,
+        companyId = tutor.company.id,
+        userId = tutor.user.id!!,
+        fullName = tutor.user.fullName,
+        email = tutor.user.email,
+        phone = tutor.phone,
+        active = tutor.active,
+        deletedAt = tutor.deletedAt,
+        createdAt = tutor.createdAt,
+        updatedAt = tutor.updatedAt
+    )
 }
+

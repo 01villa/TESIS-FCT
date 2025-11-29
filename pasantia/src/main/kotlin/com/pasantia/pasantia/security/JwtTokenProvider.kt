@@ -1,28 +1,36 @@
 package com.pasantia.pasantia.security
 
-import com.pasantia.pasantia.dto.UserDTO
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import io.jsonwebtoken.security.Keys
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.util.*
 import javax.crypto.SecretKey
 
 @Component
-class JwtTokenProvider {
+class JwtTokenProvider(
 
-    private val secretKey: SecretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256)
-    private val expirationMs: Long = 86400000 // 24 horas
+    @Value("\${jwt.secret}")
+    private val secret: String,
 
-    fun generateToken(user: UserDTO): String {
+    @Value("\${jwt.expiration}")
+    private val expirationMs: Long
+) {
+
+    private val secretKey: SecretKey = Keys.hmacShaKeyFor(secret.toByteArray(Charsets.UTF_8))
+
+    fun generateToken(email: String, roles: List<String>, userId: UUID): String {
         val now = Date()
         val expiry = Date(now.time + expirationMs)
 
         return Jwts.builder()
-            .setSubject(user.email)
+            .setSubject(email)
+            .claim("roles", roles)
+            .claim("userId", userId.toString())
             .setIssuedAt(now)
             .setExpiration(expiry)
-            .signWith(secretKey)
+            .signWith(secretKey, SignatureAlgorithm.HS256)
             .compact()
     }
 
@@ -38,13 +46,26 @@ class JwtTokenProvider {
         }
     }
 
-    fun getEmailFromToken(token: String): String {
-        val claims = Jwts.parserBuilder()
+    fun getEmailFromToken(token: String): String =
+        Jwts.parserBuilder()
             .setSigningKey(secretKey)
             .build()
             .parseClaimsJws(token)
-            .body
+            .body.subject
 
-        return claims.subject
-    }
+    fun getRolesFromToken(token: String): List<String> =
+        Jwts.parserBuilder()
+            .setSigningKey(secretKey)
+            .build()
+            .parseClaimsJws(token)
+            .body["roles"] as List<String>
+
+    fun getUserIdFromToken(token: String): UUID =
+        UUID.fromString(
+            Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .body["userId"] as String
+        )
 }

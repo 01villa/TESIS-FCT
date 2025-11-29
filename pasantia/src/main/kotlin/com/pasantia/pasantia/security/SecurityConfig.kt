@@ -9,8 +9,8 @@ import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.web.cors.CorsConfiguration
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 import org.springframework.web.cors.CorsConfigurationSource
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 class SecurityConfig(
@@ -20,23 +20,49 @@ class SecurityConfig(
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
-            .cors { it.configurationSource(corsConfig()) }   // 👈 HABILITAR CORS AQUÍ
+            .cors { it.configurationSource(corsConfig()) }
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
+
+                // Público
                 it.requestMatchers("/auth/**").permitAll()
 
-                // MODULES POR ROL → PRIMERO
-                it.requestMatchers("/school-tutor/**").hasAuthority("SCHOOL_TUTOR")
-                it.requestMatchers("/school-admin/**").hasAuthority("SCHOOL_ADMIN")
-                it.requestMatchers("/company-admin/**").hasAuthority("COMPANY_ADMIN")
+                // ADMIN puede ver todo el dashboard
+                it.requestMatchers(
+                    "/students/**",
+                    "/companies/**",
+                    "/schools/**",
+                    "/applications/**",
+                    "/vacancies/**"
+                ).hasAnyRole("ADMIN")
 
-                // ADMIN GLOBAL
-                it.requestMatchers("/admin/**").hasAuthority("ADMIN")
+                // /admin/**
+                it.requestMatchers("/admin/**").hasRole("ADMIN")
 
-                // TODO lo demás
+                // Student
+                it.requestMatchers("/student/**").hasRole("STUDENT")
+                it.requestMatchers("/applications/student/**").hasRole("STUDENT")
+
+                // Tutor escolar
+                it.requestMatchers(
+                    "/applications/assign",
+                    "/applications/school-tutor",
+                    "/applications/school-tutor/**"
+                ).hasRole("SCHOOL_TUTOR")
+
+                // Tutor empresa
+                it.requestMatchers(
+                    "/applications/company-tutor",
+                    "/applications/company-tutor/**",
+                    "/applications/*/approve",
+                    "/applications/*/reject"
+                ).hasRole("COMPANY_TUTOR")
+
+                // Resto → autenticado
                 it.anyRequest().authenticated()
             }
+
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter::class.java)
 
         return http.build()
@@ -45,12 +71,11 @@ class SecurityConfig(
     @Bean
     fun corsConfig(): CorsConfigurationSource {
         val config = CorsConfiguration()
-
+        // Ajusta estos orígenes según tu frontend
         config.allowedOrigins = listOf(
             "http://localhost:5173",
             "http://127.0.0.1:5173"
         )
-
         config.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
         config.allowedHeaders = listOf("*")
         config.exposedHeaders = listOf("Authorization")
@@ -58,7 +83,6 @@ class SecurityConfig(
 
         val source = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", config)
-
         return source
     }
 

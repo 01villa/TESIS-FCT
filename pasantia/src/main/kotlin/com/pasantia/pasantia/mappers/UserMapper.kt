@@ -9,7 +9,8 @@ object UserMapper {
         id = user.id!!,
         email = user.email,
         fullName = user.fullName,
-        status = user.status,
+        active = user.active,
+        deletedAt = user.deletedAt,
         roles = roles,
         createdAt = user.createdAt,
         updatedAt = user.updatedAt

@@ -1,5 +1,6 @@
 package com.pasantia.pasantia.entities
 
+import com.pasantia.pasantia.common.SoftDeletable
 import jakarta.persistence.*
 import org.hibernate.annotations.GenericGenerator
 import org.springframework.data.annotation.CreatedBy
@@ -25,14 +26,23 @@ open class User(
     val email: String,
 
     @Column(name = "password_hash", nullable = false, columnDefinition = "TEXT")
-    val passwordHash: String,
+    var passwordHash: String,
 
     @Column(name = "full_name", nullable = false, length = 150)
-    val fullName: String,
+    var fullName: String,
 
+    // ============================
+    // Soft Delete
+    // ============================
     @Column(nullable = false)
-    val status: Int = 1,
+    override var active: Boolean = true,
 
+    @Column
+    override var deletedAt: LocalDateTime? = null,
+
+    // ============================
+    // Audit
+    // ============================
     @CreatedDate
     @Column(nullable = true, updatable = false)
     var createdAt: LocalDateTime? = null,
@@ -48,4 +58,5 @@ open class User(
     @LastModifiedBy
     @Column(name = "updated_by", nullable = true)
     var updatedBy: String? = null
-)
+
+) : SoftDeletable

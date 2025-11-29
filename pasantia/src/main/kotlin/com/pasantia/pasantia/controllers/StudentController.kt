@@ -5,40 +5,78 @@ import com.pasantia.pasantia.dto.student.UpdateStudentDTO
 import com.pasantia.pasantia.services.StudentService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
-import java.security.Principal
-import java.util.UUID
+import java.util.*
 
 @RestController
-@RequestMapping("/school-tutor/students")
+@RequestMapping("/admin/students")
 class StudentController(
     private val studentService: StudentService
 ) {
 
-    @PostMapping
-    fun create(
-        principal: Principal,
+    // ========================================================
+    // CREATE STUDENT (Admin o SchoolAdmin)
+    // Ruta correcta: POST /admin/students/school/{schoolId}
+    // ========================================================
+    @PostMapping("/school/{schoolId}")
+    fun createStudent(
+        @PathVariable schoolId: UUID,
         @RequestBody dto: CreateStudentDTO
-    ): ResponseEntity<Any> =
-        ResponseEntity.ok(studentService.createStudent(principal.name, dto))
+    ) = ResponseEntity.ok(studentService.createStudent(schoolId, dto))
 
+    // ========================================================
+    // LIST ALL ACTIVE STUDENTS
+    // GET /admin/students
+    // ========================================================
     @GetMapping
-    fun list(principal: Principal): ResponseEntity<Any> =
-        ResponseEntity.ok(studentService.listStudents(principal.name))
+    fun listStudents() =
+        ResponseEntity.ok(studentService.listStudents())
 
+    // ========================================================
+    // LIST STUDENTS BY SCHOOL
+    // GET /admin/students/school/{schoolId}
+    // ========================================================
+    @GetMapping("/school/{schoolId}")
+    fun listBySchool(
+        @PathVariable schoolId: UUID
+    ) = ResponseEntity.ok(studentService.listBySchool(schoolId))
+
+    // ========================================================
+    // GET ONE STUDENT
+    // GET /admin/students/{id}
+    // ========================================================
+    @GetMapping("/{id}")
+    fun getStudent(
+        @PathVariable id: UUID
+    ) = ResponseEntity.ok(studentService.getStudent(id))
+
+    // ========================================================
+    // UPDATE STUDENT
+    // PUT /admin/students/{id}
+    // ========================================================
     @PutMapping("/{id}")
-    fun update(
-        principal: Principal,
+    fun updateStudent(
         @PathVariable id: UUID,
         @RequestBody dto: UpdateStudentDTO
-    ): ResponseEntity<Any> =
-        ResponseEntity.ok(studentService.updateStudent(principal.name, id, dto))
+    ) = ResponseEntity.ok(studentService.updateStudent(id, dto))
 
+    // ========================================================
+    // SOFT DELETE
+    // DELETE /admin/students/{id}
+    // ========================================================
     @DeleteMapping("/{id}")
-    fun delete(
-        principal: Principal,
+    fun deleteStudent(
         @PathVariable id: UUID
-    ): ResponseEntity<Any> {
-        studentService.deleteStudent(principal.name, id)
+    ): ResponseEntity<Void> {
+        studentService.softDelete(id)
         return ResponseEntity.noContent().build()
     }
+
+    // ========================================================
+    // RESTORE STUDENT
+    // PATCH /admin/students/{id}/restore
+    // ========================================================
+    @PatchMapping("/{id}/restore")
+    fun restoreStudent(
+        @PathVariable id: UUID
+    ) = ResponseEntity.ok(studentService.restore(id))
 }

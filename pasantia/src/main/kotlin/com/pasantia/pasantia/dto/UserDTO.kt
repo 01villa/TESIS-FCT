@@ -7,7 +7,8 @@ data class UserDTO(
     val id: UUID,
     val email: String,
     val fullName: String,
-    val status: Int,
+    val active: Boolean,
+    val deletedAt: LocalDateTime?,
     val roles: List<String>,
     val createdAt: LocalDateTime?,
     val updatedAt: LocalDateTime?

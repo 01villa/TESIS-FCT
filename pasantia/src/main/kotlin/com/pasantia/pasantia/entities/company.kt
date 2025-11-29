@@ -1,11 +1,13 @@
 package com.pasantia.pasantia.entities
 
+import com.pasantia.pasantia.common.SoftDeletable
 import jakarta.persistence.*
 import org.springframework.data.annotation.CreatedBy
 import org.springframework.data.annotation.CreatedDate
+import org.springframework.data.annotation.LastModifiedDate
 import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.LocalDateTime
-import java.util.*
+import java.util.UUID
 
 @Entity
 @EntityListeners(AuditingEntityListener::class)
@@ -17,16 +19,33 @@ data class Company(
     val id: UUID = UUID.randomUUID(),
 
     @Column(nullable = false, length = 150)
-    val name: String,
+    var name: String,
 
     @Column(length = 200)
-    val address: String? = null,
+    var address: String? = null,
 
+    // ============================
+    // Soft Delete
+    // ============================
+    @Column(nullable = false)
+    override var active: Boolean = true,
+
+    @Column
+    override var deletedAt: LocalDateTime? = null,
+
+    // ============================
+    // Auditoría
+    // ============================
     @CreatedBy
     @Column(name = "created_by", nullable = true)
     var createdBy: String? = null,
 
     @CreatedDate
+    @Column(nullable = true, updatable = false)
+    var createdAt: LocalDateTime? = null,
+
+    @LastModifiedDate
     @Column(nullable = true)
-    var createdAt: LocalDateTime? = null
-)
+    var updatedAt: LocalDateTime? = null
+
+) : SoftDeletable

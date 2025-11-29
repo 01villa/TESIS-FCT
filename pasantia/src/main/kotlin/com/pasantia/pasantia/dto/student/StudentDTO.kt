@@ -1,15 +1,17 @@
 package com.pasantia.pasantia.dto.student
 
+import java.time.LocalDateTime
 import java.util.UUID
 
 data class StudentDTO(
     val id: UUID,
-    val firstName: String,
-    val lastName: String,
+    val schoolId: UUID,
+    val userId: UUID,
     val fullName: String,
     val ci: String,
-    val email: String,
     val phone: String?,
-    val status: Short,
-    val schoolId: UUID
+    val active: Boolean,
+    val deletedAt: LocalDateTime?,
+    val createdAt: LocalDateTime?,
+    val updatedAt: LocalDateTime?
 )

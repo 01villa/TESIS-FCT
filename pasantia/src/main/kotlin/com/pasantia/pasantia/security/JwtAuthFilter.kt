@@ -16,8 +16,7 @@ class JwtAuthFilter(
 ) : OncePerRequestFilter() {
 
     override fun shouldNotFilter(request: HttpServletRequest): Boolean {
-        val path = request.requestURI
-        return path.startsWith("/auth/")
+        return request.requestURI.startsWith("/auth/")
     }
 
     override fun doFilterInternal(
@@ -28,17 +27,20 @@ class JwtAuthFilter(
         val token = parseToken(request)
 
         if (token != null && jwtTokenProvider.validateToken(token)) {
+
             val email = jwtTokenProvider.getEmailFromToken(token)
+
             val userDetails = customUserDetailsService.loadUserByUsername(email)
 
-            val auth = UsernamePasswordAuthenticationToken(
+            val authentication = UsernamePasswordAuthenticationToken(
                 userDetails,
                 null,
                 userDetails.authorities
             )
 
-            auth.details = WebAuthenticationDetailsSource().buildDetails(request)
-            SecurityContextHolder.getContext().authentication = auth
+            authentication.details = WebAuthenticationDetailsSource().buildDetails(request)
+
+            SecurityContextHolder.getContext().authentication = authentication
         }
 
         filterChain.doFilter(request, response)
@@ -46,7 +48,6 @@ class JwtAuthFilter(
 
     private fun parseToken(request: HttpServletRequest): String? {
         val header = request.getHeader("Authorization") ?: return null
-
         return if (header.startsWith("Bearer ")) header.substring(7) else null
     }
 }
