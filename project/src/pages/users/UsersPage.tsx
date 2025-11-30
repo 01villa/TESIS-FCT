@@ -19,9 +19,11 @@ import {
   ModalBody,
   ModalFooter,
   ModalCloseButton,
+  IconButton,
 } from "@chakra-ui/react";
 
 import { useEffect, useState } from "react";
+import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 import { usersApi } from "../../api/users.api";
 import CreateAdminModal from "./CreateAdminModal";
 import EditAdminModal from "./EditAdminModal";
@@ -29,10 +31,16 @@ import EditAdminModal from "./EditAdminModal";
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [filtered, setFiltered] = useState<any[]>([]);
+  const [sorted, setSorted] = useState<any[]>([]);
   const [selected, setSelected] = useState<any | null>(null);
 
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
+
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: "asc" | "desc";
+  } | null>(null);
 
   const {
     isOpen: isOpenCreate,
@@ -56,11 +64,19 @@ export default function UsersPage() {
     const data = await usersApi.list();
     setUsers(data);
     setFiltered(data);
+    setSorted(data);
   };
 
   useEffect(() => {
     loadUsers();
   }, []);
+
+  // Diccionario: rol técnico -> etiqueta amigable
+  const roleLabels: Record<string, string> = {
+    ADMIN: "Administrador General",
+    COMPANY_ADMIN: "Administrador de Empresa",
+    SCHOOL_ADMIN: "Administrador de Colegio",
+  };
 
   // ----------------------------
   // FILTROS
@@ -69,8 +85,9 @@ export default function UsersPage() {
     let result = [...users];
 
     if (search.trim() !== "") {
+      const q = search.toLowerCase();
       result = result.filter((u) =>
-        `${u.fullName} ${u.email}`.toLowerCase().includes(search.toLowerCase())
+        `${u.fullName} ${u.email}`.toLowerCase().includes(q)
       );
     }
 
@@ -81,7 +98,45 @@ export default function UsersPage() {
     setFiltered(result);
   }, [search, roleFilter, users]);
 
-  // Obtener todos los roles reales para el Select
+  // ----------------------------
+  // ORDENAMIENTO
+  // ----------------------------
+  const applySort = (data: any[], config: typeof sortConfig) => {
+    if (!config) return data;
+
+    const { key, direction } = config;
+
+    return [...data].sort((a, b) => {
+      const x = a[key]?.toString().toLowerCase() ?? "";
+      const y = b[key]?.toString().toLowerCase() ?? "";
+
+      if (x < y) return direction === "asc" ? -1 : 1;
+      if (x > y) return direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  };
+
+  // recalcular sorted cuando cambian filtros o config de orden
+  useEffect(() => {
+    setSorted(applySort(filtered, sortConfig));
+  }, [filtered, sortConfig]);
+
+  const handleSort = (key: string) => {
+    let direction: "asc" | "desc" = "asc";
+
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key: string) => {
+    if (!sortConfig || sortConfig.key !== key) return <FaSort />;
+    return sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />;
+  };
+
+  // roles disponibles para el Select (pero con label amigable)
   const availableRoles = Array.from(
     new Set(users.flatMap((u) => u.roles ?? []))
   );
@@ -110,11 +165,11 @@ export default function UsersPage() {
           placeholder="Rol"
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
-          maxW="200px"
+          maxW="240px"
         >
           {availableRoles.map((r) => (
             <option key={r} value={r}>
-              {r}
+              {roleLabels[r] ?? r}
             </option>
           ))}
         </Select>
@@ -128,19 +183,43 @@ export default function UsersPage() {
       <Table variant="simple" bg="white" rounded="md" shadow="sm">
         <Thead bg="gray.100">
           <Tr>
-            <Th>NOMBRE</Th>
-            <Th>EMAIL</Th>
-            <Th>ROLES</Th>
+            <Th>
+              <Flex align="center" gap={2}>
+                NOMBRE
+                <IconButton
+                  aria-label="Ordenar por nombre"
+                  size="xs"
+                  variant="ghost"
+                  icon={getSortIcon("fullName")}
+                  onClick={() => handleSort("fullName")}
+                />
+              </Flex>
+            </Th>
+
+            <Th>
+              <Flex align="center" gap={2}>
+                EMAIL
+                <IconButton
+                  aria-label="Ordenar por email"
+                  size="xs"
+                  variant="ghost"
+                  icon={getSortIcon("email")}
+                  onClick={() => handleSort("email")}
+                />
+              </Flex>
+            </Th>
+
+            <Th>ROL</Th>
             <Th textAlign="center">ACCIONES</Th>
           </Tr>
         </Thead>
 
         <Tbody>
-          {filtered.map((u) => (
+          {sorted.map((u) => (
             <Tr key={u.id}>
-              <Td>{u.fullName}</Td>
+              <Td fontWeight="500">{u.fullName}</Td>
               <Td>{u.email}</Td>
-              <Td>{u.roles?.join(", ")}</Td>
+              <Td>{u.roles?.map((r: string) => roleLabels[r] ?? r).join(", ")}</Td>
 
               <Td>
                 <Flex justify="center" gap={3}>
@@ -216,13 +295,14 @@ function InstructionsModal({ isOpen, onClose }: any) {
         <ModalBody fontSize="md" color="gray.600">
           En este módulo se gestionan exclusivamente los{" "}
           <strong>usuarios administradores del sistema</strong>.  
-          Aquí puedes <strong>crear, editar o eliminar</strong> administradores, y demas usuarios 
-           podemos editar o eliminar.
-          <br /><br />
-          Este módulo <strong>no crea usuarios con roles específicos </strong>
-          como estudiantes, tutores escolares o tutores de empresa.
-          Esos perfiles se gestionan desde los módulos correspondientes
-          (escuelas, empresas o asignaciones).
+          Aquí puedes crear, editar y eliminar administradores,
+          modificando nombre, correo electrónico y contraseña.
+          <br />
+          <br />
+          Este módulo no crea usuarios con roles específicos
+          (estudiantes, tutores escolares o tutores de empresa).
+          Esos perfiles se gestionan desde los módulos de escuelas,
+          empresas o asignaciones, según corresponda.
         </ModalBody>
 
         <ModalFooter>

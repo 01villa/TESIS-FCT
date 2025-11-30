@@ -9,6 +9,8 @@ import DashboardHome from "../pages/dashboard/DashboardHome";
 
 // 🔥 Importar UsersPage
 import UsersPage from "../pages/users/UsersPage";
+import SchoolDetailPage from "../pages/colegios/SchoolDetailPage";
+import SchoolsPage from "../pages/colegios/SchoolPage";
 
 export default function AppRouter() {
   return (
@@ -32,6 +34,8 @@ export default function AppRouter() {
         >
           {/* Home del dashboard */}
           <Route index element={<DashboardHome />} />
+          <Route path="schools" element={<SchoolsPage />} />
+<Route path="schools/:id" element={<SchoolDetailPage />} />
 
           {/* 🔥 Aquí se expone tu CRUD de admins */}
           <Route path="users" element={<UsersPage />} />
