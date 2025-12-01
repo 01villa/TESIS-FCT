@@ -9,7 +9,8 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/auth")
 class AuthController(
-    private val authService: AuthService
+    private val authService: AuthService,
+    private val userService: UserService
 ) {
 
     @PostMapping("/login")

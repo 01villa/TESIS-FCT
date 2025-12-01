@@ -1,0 +1,293 @@
+import {
+  Box,
+  Button,
+  Flex,
+  Heading,
+  Spinner,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  Badge,
+  Text,
+  Center,
+  useDisclosure,
+  Input,
+} from "@chakra-ui/react";
+
+import { useEffect, useState } from "react";
+
+import { ChevronDownIcon, ChevronUpIcon } from "@chakra-ui/icons";
+import { schoolStudentsApi } from "../../../api/school.students.api";
+
+import CreateSchoolStudentModal from "./CreateSchoolStudentModal";
+import EditSchoolStudentModal from "./EditSchoolStudentModal";
+import StudentDetailModal from "./StudentDetailModal";
+import { usersApi } from "../../../api/users.api";
+
+interface Filters {
+  search: string;
+  status: "all" | "active" | "deleted";
+}
+
+export default function StudentsTab({ schoolId }: any) {
+  const [students, setStudents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+
+  const createModal = useDisclosure();
+  const editModal = useDisclosure();
+  const detailModal = useDisclosure();
+
+  const [filters, setFilters] = useState<Filters>({
+    search: "",
+    status: "all",
+  });
+
+  const [sortField, setSortField] = useState("fullName");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+const load = async () => {
+  setLoading(true);
+
+  // 1️⃣ Obtener estudiantes
+  const data = await schoolStudentsApi.listBySchool(schoolId);
+
+  // 2️⃣ Obtener usuarios para traer email
+  const users = await usersApi.list(); // ya lo tienes hecho en tu proyecto
+
+  // 3️⃣ Merge: agregar email desde user
+  const merged = data.map((s: any) => {
+    const user = users.find((u: any) => u.id === s.userId);
+    return {
+      ...s,
+      email: user ? user.email : "—",
+    };
+  });
+
+  setStudents(merged);
+  setLoading(false);
+};
+
+  useEffect(() => {
+    load();
+  }, [schoolId]);
+
+  // FILTRO
+  const filtered = students.filter((s) => {
+    const matchesSearch =
+      (s.fullName ?? "")
+        .toLowerCase()
+        .includes(filters.search.toLowerCase()) ||
+      (s.email ?? "")
+        .toLowerCase()
+        .includes(filters.search.toLowerCase());
+
+    const matchesStatus =
+      filters.status === "all"
+        ? true
+        : filters.status === "active"
+        ? s.deletedAt === null
+        : s.deletedAt !== null;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  // SORT
+  const sorted = [...filtered].sort((a, b) => {
+    let A = a[sortField];
+    let B = b[sortField];
+
+    if (typeof A === "string") {
+      A = A.toLowerCase();
+      B = B.toLowerCase();
+    }
+
+    if (A < B) return sortOrder === "asc" ? -1 : 1;
+    if (A > B) return sortOrder === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const toggleSort = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
+
+  const sortIcon = (field: string) =>
+    sortField !== field ? null : sortOrder === "asc" ? <ChevronUpIcon /> : <ChevronDownIcon />;
+
+  if (loading)
+    return (
+      <Center mt={5}>
+        <Spinner size="lg" />
+      </Center>
+    );
+
+  return (
+    <Box>
+      <Flex justify="space-between" align="center" mb={5}>
+        <Heading size="md">Estudiantes de la Escuela</Heading>
+
+        <Button colorScheme="blue" onClick={createModal.onOpen}>
+          + Nuevo Estudiante
+        </Button>
+      </Flex>
+
+      {/* FILTROS */}
+      <Flex gap={4} mb={5}>
+        <Input
+          placeholder="Buscar por nombre o correo…"
+          onChange={(e) =>
+            setFilters((p) => ({ ...p, search: e.target.value }))
+          }
+        />
+
+        <select
+          style={{
+            padding: "8px",
+            borderRadius: "6px",
+            border: "1px solid #ccc",
+          }}
+          onChange={(e) =>
+            setFilters((p) => ({ ...p, status: e.target.value as any }))
+          }
+        >
+          <option value="all">Todos</option>
+          <option value="active">Activos</option>
+          <option value="deleted">Eliminados</option>
+        </select>
+      </Flex>
+
+      {sorted.length === 0 && (
+        <Center
+          p={10}
+          bg="gray.50"
+          borderRadius="md"
+          borderWidth="1px"
+          borderColor="gray.200"
+        >
+          <Text>No hay estudiantes registrados.</Text>
+        </Center>
+      )}
+
+      {sorted.length > 0 && (
+        <Table variant="simple">
+          <Thead>
+            <Tr>
+              <Th cursor="pointer" onClick={() => toggleSort("fullName")}>
+                Nombre {sortIcon("fullName")}
+              </Th>
+
+              <Th cursor="pointer" onClick={() => toggleSort("email")}>
+                Email {sortIcon("email")}
+              </Th>
+
+              <Th cursor="pointer" onClick={() => toggleSort("deletedAt")}>
+                Estado {sortIcon("deletedAt")}
+              </Th>
+
+              <Th textAlign="center">Acciones</Th>
+            </Tr>
+          </Thead>
+
+          <Tbody>
+            {sorted.map((s) => (
+              <Tr key={s.id}>
+                <Td>{s.fullName}</Td>
+                <Td>{s.email}</Td>
+
+                <Td>
+                  {!s.deletedAt ? (
+                    <Badge colorScheme="green">Activo</Badge>
+                  ) : (
+                    <Badge colorScheme="red">Eliminado</Badge>
+                  )}
+                </Td>
+
+                <Td>
+                  <Flex gap={3} justify="center">
+                    {/* VER MÁS */}
+                    <Button
+                      size="sm"
+                      colorScheme="blue"
+                      onClick={() => {
+                        setSelectedStudent(s);
+                        detailModal.onOpen();
+                      }}
+                    >
+                      Ver más
+                    </Button>
+
+                    {/* EDITAR */}
+                    <Button
+                      size="sm"
+                      colorScheme="yellow"
+                      onClick={() => {
+                        setSelectedStudent(s);
+                        editModal.onOpen();
+                      }}
+                    >
+                      Editar
+                    </Button>
+
+                    {/* ELIMINAR / RESTAURAR */}
+                    {!s.deletedAt ? (
+                      <Button
+                        size="sm"
+                        colorScheme="red"
+                        onClick={async () => {
+                          await schoolStudentsApi.delete(s.id);
+                          load();
+                        }}
+                      >
+                        Eliminar
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        colorScheme="green"
+                        onClick={async () => {
+                          await schoolStudentsApi.restore(s.id);
+                          load();
+                        }}
+                      >
+                        Restaurar
+                      </Button>
+                    )}
+                  </Flex>
+                </Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      )}
+
+      {/* MODALES */}
+      <CreateSchoolStudentModal
+        isOpen={createModal.isOpen}
+        onClose={createModal.onClose}
+        schoolId={schoolId}
+        onCreated={load}
+      />
+
+      <EditSchoolStudentModal
+        isOpen={editModal.isOpen}
+        onClose={editModal.onClose}
+        student={selectedStudent}
+        onUpdated={load}
+      />
+
+      <StudentDetailModal
+        isOpen={detailModal.isOpen}
+        onClose={detailModal.onClose}
+        student={selectedStudent}
+      />
+    </Box>
+  );
+}

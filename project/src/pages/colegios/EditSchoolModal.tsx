@@ -3,52 +3,70 @@ import {
   ModalOverlay,
   ModalContent,
   ModalHeader,
-  ModalCloseButton,
-  ModalBody,
   ModalFooter,
+  ModalBody,
   Button,
+  FormControl,
+  FormLabel,
   Input,
-  VStack,
+  Textarea,
 } from "@chakra-ui/react";
-import { useState } from "react";
+
+import { useEffect, useState } from "react";
 import { schoolsApi } from "../../api/school.api";
+export default function EditSchoolModal({ isOpen, onClose, school, onUpdated }: any) {
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
 
-export default function EditSchoolModal({ isOpen, onClose, school }: any) {
-  const [form, setForm] = useState({
-    name: school.name,
-    email: school.email || "",
-    phone: school.phone || "",
-    address: school.address || "",
-  });
-
-  const handleChange = (e: any) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+  useEffect(() => {
+    if (school) {
+      setName(school.name);
+      setAddress(school.address ?? "");
+    }
+  }, [school]);
 
   const handleSave = async () => {
-    await schoolsApi.update(school.id, form);
+    await schoolsApi.update(school.id, {
+      name,
+      address: address || null,
+    });
+
+    onUpdated(); // recargar tabla
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg">
+    <Modal isOpen={isOpen} onClose={onClose}>
       <ModalOverlay />
+
       <ModalContent>
-        <ModalHeader>Editar Colegio</ModalHeader>
-        <ModalCloseButton />
+        <ModalHeader>Editar Escuela</ModalHeader>
 
         <ModalBody>
-          <VStack spacing={4}>
-            <Input name="name" value={form.name} onChange={handleChange} />
-            <Input name="email" value={form.email} onChange={handleChange} />
-            <Input name="phone" value={form.phone} onChange={handleChange} />
-            <Input name="address" value={form.address} onChange={handleChange} />
-          </VStack>
+          <FormControl mb={4}>
+            <FormLabel>Nombre</FormLabel>
+            <Input
+              placeholder="Nombre de la escuela"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </FormControl>
+
+          <FormControl mb={4}>
+            <FormLabel>Dirección</FormLabel>
+            <Textarea
+              placeholder="Dirección"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+          </FormControl>
         </ModalBody>
 
         <ModalFooter>
-          <Button colorScheme="blue" onClick={handleSave}>
+          <Button colorScheme="blue" onClick={handleSave} mr={3}>
             Guardar
           </Button>
+          <Button onClick={onClose}>Cancelar</Button>
         </ModalFooter>
       </ModalContent>
     </Modal>

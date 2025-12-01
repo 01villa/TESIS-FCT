@@ -3,52 +3,64 @@ import {
   ModalOverlay,
   ModalContent,
   ModalHeader,
-  ModalCloseButton,
-  ModalBody,
   ModalFooter,
+  ModalBody,
   Button,
+  FormControl,
+  FormLabel,
   Input,
-  VStack,
+  Textarea,
 } from "@chakra-ui/react";
+
 import { useState } from "react";
 import { schoolsApi } from "../../api/school.api";
 
-export default function CreateSchoolModal({ isOpen, onClose }: any) {
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-  });
-
-  const handleChange = (e: any) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+export default function CreateSchoolModal({ isOpen, onClose, onCreated }: any) {
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
 
   const handleSave = async () => {
-    await schoolsApi.create(form);
+    await schoolsApi.create({
+      name,
+      address: address || null,
+    });
+
+    onCreated(); // Recargar la tabla
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg">
+    <Modal isOpen={isOpen} onClose={onClose}>
       <ModalOverlay />
+
       <ModalContent>
-        <ModalHeader>Crear Colegio</ModalHeader>
-        <ModalCloseButton />
+        <ModalHeader>Registrar Escuela</ModalHeader>
 
         <ModalBody>
-          <VStack spacing={4}>
-            <Input placeholder="Nombre" name="name" onChange={handleChange} />
-            <Input placeholder="Email" name="email" onChange={handleChange} />
-            <Input placeholder="Teléfono" name="phone" onChange={handleChange} />
-            <Input placeholder="Dirección" name="address" onChange={handleChange} />
-          </VStack>
+          <FormControl mb={4}>
+            <FormLabel>Nombre</FormLabel>
+            <Input
+              placeholder="Nombre de la escuela"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </FormControl>
+
+          <FormControl mb={4}>
+            <FormLabel>Dirección</FormLabel>
+            <Textarea
+              placeholder="Dirección"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+          </FormControl>
         </ModalBody>
 
         <ModalFooter>
-          <Button colorScheme="blue" onClick={handleSave}>
+          <Button colorScheme="blue" onClick={handleSave} mr={3}>
             Guardar
           </Button>
+          <Button onClick={onClose}>Cancelar</Button>
         </ModalFooter>
       </ModalContent>
     </Modal>

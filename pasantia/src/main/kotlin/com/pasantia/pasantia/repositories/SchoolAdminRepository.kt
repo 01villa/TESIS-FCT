@@ -7,7 +7,7 @@ import java.util.*
 
 interface SchoolAdminRepository : JpaRepository<SchoolAdmin, UUID> {
 
-    fun findByUser(user: User): SchoolAdmin?
+    fun findByUserId(userId: UUID): SchoolAdmin?
 
     fun findAllByActiveTrue(): List<SchoolAdmin>
 

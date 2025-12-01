@@ -16,22 +16,39 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 interface DashboardStats {
   vacancies: number;
   students: number;
   companies: number;
-  schools: number;              // 👈 NUEVO
+  schools: number;
 }
 
 export default function DashboardHome() {
   const { user, role } = useAuth();
+  const navigate = useNavigate();
+
+  // -----------------------------------------------------
+  //  🚨 EVITAR QUE SCHOOL_ADMIN VEA ESTE DASHBOARD
+  // -----------------------------------------------------
+  useEffect(() => {
+    if (!role) return;
+
+    if (role === "SCHOOL_ADMIN") {
+      navigate("/dashboard/school"); // redirección inmediata
+    }
+  }, [role]);
+
+  // Si el rol es SCHOOL_ADMIN → NO RENDERIZAR NADA
+  if (role === "SCHOOL_ADMIN") return null;
+  // -----------------------------------------------------
 
   const [stats, setStats] = useState<DashboardStats>({
     vacancies: 0,
     students: 0,
     companies: 0,
-    schools: 0,                 // 👈 NUEVO
+    schools: 0,
   });
 
   const [loading, setLoading] = useState(true);
@@ -49,30 +66,21 @@ export default function DashboardHome() {
             axios.get("/vacancies"),
             axios.get("/admin/students"),
             axios.get("/admin/companies"),
-            axios.get("/admin/schools"),     // 👈 NUEVO
+            axios.get("/admin/schools"),
           ]);
 
         if (cancelled) return;
 
         setStats({
-          vacancies: Array.isArray(vacanciesRes.data)
-            ? vacanciesRes.data.length
-            : 0,
-          students: Array.isArray(studentsRes.data)
-            ? studentsRes.data.length
-            : 0,
-          companies: Array.isArray(companiesRes.data)
-            ? companiesRes.data.length
-            : 0,
-          schools: Array.isArray(schoolsRes.data)
-            ? schoolsRes.data.length
-            : 0, // 👈 NUEVO
+          vacancies: Array.isArray(vacanciesRes.data) ? vacanciesRes.data.length : 0,
+          students: Array.isArray(studentsRes.data) ? studentsRes.data.length : 0,
+          companies: Array.isArray(companiesRes.data) ? companiesRes.data.length : 0,
+          schools: Array.isArray(schoolsRes.data) ? schoolsRes.data.length : 0,
         });
       } catch (err) {
         console.error("Error cargando estadísticas del dashboard", err);
         if (!cancelled) {
           setError("No se pudieron cargar las estadísticas (se muestran en 0).");
-          // stats se queda en 0, pero la página sigue viva
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -92,9 +100,9 @@ export default function DashboardHome() {
     );
   }
 
+  // 🌟 (Tu contenido se mantiene igual a partir de aquí)
   return (
     <Box>
-      {/* HEADER */}
       <Box mb={10}>
         <Heading size="lg">Bienvenido, {user?.fullName}</Heading>
         <Box fontSize="md" mt={2} color="gray.500">
@@ -109,51 +117,22 @@ export default function DashboardHome() {
 
       <Divider mb={10} />
 
-      {/* ESTADÍSTICAS */}
       <SimpleGrid columns={{ base: 1, md: 4 }} spacing={6} mb={10}>
-        <StatCard
-          label="Vacantes activas"
-          value={stats.vacancies}
-          change="+0%"
-        />
-        <StatCard
-          label="Estudiantes inscritos"
-          value={stats.students}
-          change="+0%"
-        />
-        <StatCard
-          label="Empresas asociadas"
-          value={stats.companies}
-          change="+0%"
-        />
-        <StatCard
-          label="Escuelas registradas"      // 👈 NUEVO
-          value={stats.schools}
-          change="+0%"
-        />
+        <StatCard label="Vacantes activas" value={stats.vacancies} change="+0%" />
+        <StatCard label="Estudiantes inscritos" value={stats.students} change="+0%" />
+        <StatCard label="Empresas asociadas" value={stats.companies} change="+0%" />
+        <StatCard label="Escuelas registradas" value={stats.schools} change="+0%" />
       </SimpleGrid>
 
-      {/* GRÁFICOS / MÓDULOS */}
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-        <Box
-          p={6}
-          rounded="lg"
-          shadow="md"
-          bg={useColorModeValue("white", "gray.800")}
-        >
+        <Box p={6} rounded="lg" shadow="md" bg={useColorModeValue("white", "gray.800")}>
           <Heading size="md" mb={4}>
             Actividad reciente
           </Heading>
-
           <Box color="gray.500">Próximamente gráfico...</Box>
         </Box>
 
-        <Box
-          p={6}
-          rounded="lg"
-          shadow="md"
-          bg={useColorModeValue("white", "gray.800")}
-        >
+        <Box p={6} rounded="lg" shadow="md" bg={useColorModeValue("white", "gray.800")}>
           <Heading size="md" mb={4}>
             Resumen general
           </Heading>

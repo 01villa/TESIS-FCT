@@ -11,7 +11,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
-
 @Configuration
 class SecurityConfig(
     private val jwtAuthFilter: JwtAuthFilter
@@ -25,44 +24,70 @@ class SecurityConfig(
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
 
-                // Público
+                // ---------------------------
+                // PÚBLICO
+                // ---------------------------
                 it.requestMatchers("/auth/**").permitAll()
 
-                // ADMIN puede ver todo el dashboard
+                // ---------------------------
+                // ADMIN GENERAL
+                // ---------------------------
                 it.requestMatchers(
                     "/students/**",
-                    "/companies/**",
-                    "/schools/**",
                     "/applications/**",
                     "/vacancies/**"
-                ).hasAnyRole("ADMIN")
+                ).hasRole("ADMIN")
 
-                // /admin/**
-                it.requestMatchers("/admin/**").hasRole("ADMIN")
+                // ---------------------------
+                // ESCUELAS
+                // ---------------------------
+                it.requestMatchers("/schools/**")
+                    .hasAnyRole("ADMIN", "SCHOOL_ADMIN")
 
-                // Student
-                it.requestMatchers("/student/**").hasRole("STUDENT")
-                it.requestMatchers("/applications/student/**").hasRole("STUDENT")
-
-                // Tutor escolar
+                // ADMINISTRACIÓN DE ESCUELAS
                 it.requestMatchers(
-                    "/applications/assign",
-                    "/applications/school-tutor",
+                    "/admin/schools/**",
+                    "/admin/school-admins/**",
+                    "/admin/school-tutors/**",
+                    "/admin/students/**"
+                ).hasAnyRole("ADMIN", "SCHOOL_ADMIN")
+
+                // ---------------------------
+                // EMPRESAS
+                // ---------------------------
+                it.requestMatchers("/companies/**")
+                    .hasAnyRole("ADMIN", "COMPANY_ADMIN")
+
+                it.requestMatchers("/admin/companies/**")
+                    .hasAnyRole("ADMIN", "COMPANY_ADMIN")
+
+                // ---------------------------
+                // TUTOR ESCOLAR
+                // ---------------------------
+                it.requestMatchers(
                     "/applications/school-tutor/**"
                 ).hasRole("SCHOOL_TUTOR")
 
-                // Tutor empresa
+                // ---------------------------
+                // TUTOR EMPRESA
+                // ---------------------------
                 it.requestMatchers(
-                    "/applications/company-tutor",
-                    "/applications/company-tutor/**",
-                    "/applications/*/approve",
-                    "/applications/*/reject"
+                    "/applications/company-tutor/**"
                 ).hasRole("COMPANY_TUTOR")
 
-                // Resto → autenticado
+                // ---------------------------
+                // ESTUDIANTE
+                // ---------------------------
+                it.requestMatchers(
+                    "/student/**",
+                    "/applications/student/**"
+                ).hasRole("STUDENT")
+
+                // ---------------------------
+                // RESTO
+                // ---------------------------
                 it.anyRequest().authenticated()
             }
-
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter::class.java)
 
         return http.build()
@@ -71,7 +96,6 @@ class SecurityConfig(
     @Bean
     fun corsConfig(): CorsConfigurationSource {
         val config = CorsConfiguration()
-        // Ajusta estos orígenes según tu frontend
         config.allowedOrigins = listOf(
             "http://localhost:5173",
             "http://127.0.0.1:5173"
@@ -83,6 +107,7 @@ class SecurityConfig(
 
         val source = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", config)
+
         return source
     }
 

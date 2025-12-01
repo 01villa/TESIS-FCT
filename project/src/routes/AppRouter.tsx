@@ -1,29 +1,28 @@
-// src/router/AppRouter.tsx
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import LandingPage from "../pages/LandingPage";
 import Login from "../modules/auth/Login";
-import ProtectedRoute from "../router/ProtectedRoute";
-import DashboardLayout from "../components/layout/DashboardLayout";
-import DashboardHome from "../pages/dashboard/DashboardHome";
 
-// 🔥 Importar UsersPage
+import DashboardLayout from "../components/layout/DashboardLayout";
+
+import DashboardHome from "../pages/dashboard/DashboardHome";
 import UsersPage from "../pages/users/UsersPage";
-import SchoolDetailPage from "../pages/colegios/SchoolDetailPage";
-import SchoolsPage from "../pages/colegios/SchoolPage";
+import SchoolList from "../pages/colegios/SchoolList";
+import SchoolDetails from "../pages/colegios/SchoolDetails";
+import SchoolDashboard from "../pages/colegios/SchoolDashboard";
+import ProtectedRoute from "../router/ProtectedRoute";
+
 
 export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
 
-        {/* LANDING PAGE */}
+        {/* PÚBLICAS */}
         <Route path="/" element={<LandingPage />} />
-
-        {/* LOGIN */}
         <Route path="/login" element={<Login />} />
 
-        {/* DASHBOARD PROTEGIDO */}
+        {/* PROTEGIDAS */}
         <Route
           path="/dashboard"
           element={
@@ -32,14 +31,16 @@ export default function AppRouter() {
             </ProtectedRoute>
           }
         >
-          {/* Home del dashboard */}
+          {/* HOME DEFAULT PARA ADMIN */}
           <Route index element={<DashboardHome />} />
-          <Route path="schools" element={<SchoolsPage />} />
-<Route path="schools/:id" element={<SchoolDetailPage />} />
 
-          {/* 🔥 Aquí se expone tu CRUD de admins */}
+          {/* ADMIN */}
           <Route path="users" element={<UsersPage />} />
+          <Route path="schools" element={<SchoolList />} />
+          <Route path="schools/:id" element={<SchoolDetails />} />
 
+          {/* SCHOOL ADMIN — 👉 ESTA ES LA IMPORTANTE */}
+          <Route path="school" element={<SchoolDashboard />} />
         </Route>
 
         {/* 404 */}

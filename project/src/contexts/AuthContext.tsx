@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 
 interface AuthContextType {
   token: string | null;
@@ -20,7 +21,7 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 // Base URL global
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:9090";
+const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
 
 export const AuthProvider = ({ children }: { children: any }) => {
   // 🔥 Carga instantánea desde localStorage (sin flashes, sin re-render)
@@ -64,25 +65,37 @@ export const AuthProvider = ({ children }: { children: any }) => {
   // 2) LOGIN
   // ---------------------------------------------------
   const login = async (email: string, password: string) => {
-    const res = await axios.post("/auth/login", { email, password });
+  const res = await axios.post("/auth/login", { email, password });
 
-    const data = res.data;
-    const firstRole =
-      Array.isArray(data.user?.roles) && data.user.roles.length > 0
-        ? data.user.roles[0]
-        : null;
+  const data = res.data;
 
-    // Guardar estado
-    setToken(data.token);
-    setUser(data.user);
-    setRole(firstRole);
+  // 🔥 Decodificar el token JWT
+  const decoded: any = jwtDecode(data.token);
 
-    // Persistencia
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.user));
-    if (firstRole) localStorage.setItem("role", firstRole);
+  // obtener el primer rol del backend
+  const firstRole =
+    Array.isArray(data.user?.roles) && data.user.roles.length > 0
+      ? data.user.roles[0]
+      : decoded.role ?? null;
+
+  // 🔥 Construir el objeto user completo
+  const userFinal = {
+    id: data.user?.id,
+    fullName: data.user?.fullName,
+    role: firstRole,
+    schoolId: decoded.schoolId ?? null, // 🔥 AQUI LA MAGIA
   };
 
+  // Guardar estado
+  setToken(data.token);
+  setUser(userFinal);
+  setRole(firstRole);
+
+  // Persistencia
+  localStorage.setItem("token", data.token);
+  localStorage.setItem("user", JSON.stringify(userFinal));
+  if (firstRole) localStorage.setItem("role", firstRole);
+};
   // ---------------------------------------------------
   // 3) LOGOUT
   // ---------------------------------------------------

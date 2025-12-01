@@ -1,5 +1,6 @@
 package com.pasantia.pasantia.security
 
+import com.pasantia.pasantia.repositories.SchoolAdminRepository
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import io.jsonwebtoken.security.Keys
@@ -15,7 +16,9 @@ class JwtTokenProvider(
     private val secret: String,
 
     @Value("\${jwt.expiration}")
-    private val expirationMs: Long
+    private val expirationMs: Long,
+
+    private val schoolAdminRepository: SchoolAdminRepository
 ) {
 
     private val secretKey: SecretKey = Keys.hmacShaKeyFor(secret.toByteArray(Charsets.UTF_8))
@@ -24,10 +27,14 @@ class JwtTokenProvider(
         val now = Date()
         val expiry = Date(now.time + expirationMs)
 
+        // 🔥 Buscar escuela asignada al usuario
+        val schoolId = schoolAdminRepository.findByUserId(userId)?.school?.id
+
         return Jwts.builder()
             .setSubject(email)
             .claim("roles", roles)
             .claim("userId", userId.toString())
+            .claim("schoolId", schoolId?.toString())
             .setIssuedAt(now)
             .setExpiration(expiry)
             .signWith(secretKey, SignatureAlgorithm.HS256)
