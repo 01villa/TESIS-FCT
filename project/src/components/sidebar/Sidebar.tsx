@@ -19,7 +19,9 @@ import {
   FaBuilding,
   FaUsers,
   FaFileAlt,
-
+  FaTasks,
+  FaBriefcase,
+  FaCheckCircle,
 } from "react-icons/fa";
 
 export default function Sidebar() {
@@ -37,12 +39,14 @@ export default function Sidebar() {
     ],
 
     SCHOOL_ADMIN: [
-    { label: "Mi escuela", to: "/dashboard/school", icon: FaSchool },
-    
-  ],
+      { label: "Mi escuela", to: "/dashboard/school", icon: FaSchool },
+    ],
 
     SCHOOL_TUTOR: [
-      { label: "Asignaciones", to: "/dashboard/assignments", icon: FaSchool },
+      { label: "Inicio", to: "/dashboard/tutor", icon: FaHome },
+      { label: "Vacantes", to: "/dashboard/tutor/vacancies", icon: FaBriefcase },
+      { label: "Asignar Estudiante", to: "/dashboard/tutor/assign", icon: FaTasks },
+      { label: "Mis Asignaciones", to: "/dashboard/tutor/assignments", icon: FaCheckCircle },
     ],
 
     COMPANY_TUTOR: [
@@ -55,7 +59,7 @@ export default function Sidebar() {
     ],
   };
 
-    const menu = menuByRole[role ?? "ADMIN"];
+  const menu = menuByRole[role ?? "ADMIN"];
 
   const bgSidebar = useColorModeValue("gray.50", "gray.800");
   const borderColor = useColorModeValue("gray.200", "gray.700");
@@ -103,12 +107,7 @@ export default function Sidebar() {
         ))}
 
         {/* LOGOUT */}
-        <Button
-          colorScheme="red"
-          variant="outline"
-          mt={8}
-          onClick={logout}
-        >
+        <Button colorScheme="red" variant="outline" mt={8} onClick={logout}>
           Cerrar Sesión
         </Button>
       </VStack>

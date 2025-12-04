@@ -11,6 +11,10 @@ import SchoolList from "../pages/colegios/SchoolList";
 import SchoolDetails from "../pages/colegios/SchoolDetails";
 import SchoolDashboard from "../pages/colegios/SchoolDashboard";
 import ProtectedRoute from "../router/ProtectedRoute";
+import TutorAssign from "../pages/tutor/TutorAssign";
+import TutorAssignments from "../pages/tutor/TutorAssignments";
+import TutorHome from "../pages/tutor/TutorHome";
+import TutorVacancies from "../pages/tutor/TutorVacancies";
 
 
 export default function AppRouter() {
@@ -41,6 +45,12 @@ export default function AppRouter() {
 
           {/* SCHOOL ADMIN — 👉 ESTA ES LA IMPORTANTE */}
           <Route path="school" element={<SchoolDashboard />} />
+
+          {/* SCHOOL TUTOR */}
+          <Route path="tutor" element={<TutorHome />} />
+          <Route path="tutor/vacancies" element={<TutorVacancies />} />
+          <Route path="tutor/assign" element={<TutorAssign />} />
+          <Route path="tutor/assignments" element={<TutorAssignments />} />
         </Route>
 
         {/* 404 */}
