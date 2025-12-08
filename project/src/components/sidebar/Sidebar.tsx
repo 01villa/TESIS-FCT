@@ -31,47 +31,58 @@ export default function Sidebar() {
   const { role, logout } = useAuth();
   const { colorMode, toggleColorMode } = useColorMode();
 
-  // Menús por rol
+  // =======================
+  //  MENÚS POR ROL
+  // =======================
   const menuByRole: Record<string, MenuItem[]> = {
     ADMIN: [
       { label: "Inicio", to: "/dashboard", icon: FaHome },
       { label: "Colegios", to: "/dashboard/schools", icon: FaSchool },
       { label: "Empresas", to: "/dashboard/companies", icon: FaBuilding },
       { label: "Usuarios", to: "/dashboard/users", icon: FaUsers },
-      { label: "Reportes", to: "/dashboard/reports", icon: FaFileAlt }, // luego lo armas
+      { label: "Reportes", to: "/dashboard/reports", icon: FaFileAlt },
     ],
 
     SCHOOL_ADMIN: [
-      { label: "Mi escuela", to: "/dashboard/school", icon: FaSchool },
+      { label: "Mi Escuela", to: "/dashboard/school", icon: FaSchool },
     ],
 
     SCHOOL_TUTOR: [
       { label: "Inicio", to: "/dashboard/tutor", icon: FaHome },
       { label: "Estudiantes", to: "/dashboard/tutor/students", icon: FaUsers },
       { label: "Vacantes", to: "/dashboard/tutor/vacancies", icon: FaBuilding },
-      { label: "Asignar estudiante", to: "/dashboard/tutor/assign", icon: FaFileAlt },
-      { label: "Mis asignaciones", to: "/dashboard/tutor/assignments", icon: FaFileAlt },
+      { label: "Asignar Estudiante", to: "/dashboard/tutor/assign", icon: FaFileAlt },
+      { label: "Mis Asignaciones", to: "/dashboard/tutor/assignments", icon: FaFileAlt },
     ],
 
-    // 🔹 Menú para COMPANY_ADMIN (lo mínimo funcional de momento)
     COMPANY_ADMIN: [
-      { label: "Inicio", to: "/dashboard", icon: FaHome },
-      { label: "Mi empresa", to: "/dashboard/companies", icon: FaBuilding },
-      // luego puedes separar vista específica tipo /dashboard/company
+      { label: "Mi Empresa", to: "/dashboard/company", icon: FaBuilding },
     ],
 
+    // ============================
+    // 🔥 COMPANY TUTOR CORREGIDO
+    // ============================
     COMPANY_TUTOR: [
-      { label: "Vacantes", to: "/dashboard/company/vacancies", icon: FaBuilding },
-      { label: "Estudiantes asignados", to: "/dashboard/company/assignments", icon: FaUsers },
+      { label: "Inicio", to: "/dashboard/company-tutor", icon: FaHome },
+      {
+        label: "Vacantes",
+        to: "/dashboard/company-tutor/vacancies",
+        icon: FaBuilding,
+      },
+      {
+        label: "Solicitudes",
+        to: "/dashboard/company-tutor/assignments",
+        icon: FaUsers,
+      },
     ],
 
     STUDENT: [
-      { label: "Vacantes disponibles", to: "/dashboard/vacancies", icon: FaBuilding },
-      { label: "Mis aplicaciones", to: "/dashboard/applications", icon: FaFileAlt },
+      { label: "Vacantes Disponibles", to: "/dashboard/vacancies", icon: FaBuilding },
+      { label: "Mis Aplicaciones", to: "/dashboard/applications", icon: FaFileAlt },
     ],
   };
 
-  // Normalizar rol (por si viene como "ROLE_ADMIN")
+  // Normaliza el rol (por si viene como ROLE_ADMIN)
   const normalizedRole = (role || "ADMIN").replace(/^ROLE_/, "");
   const menu = menuByRole[normalizedRole] ?? menuByRole["ADMIN"];
 

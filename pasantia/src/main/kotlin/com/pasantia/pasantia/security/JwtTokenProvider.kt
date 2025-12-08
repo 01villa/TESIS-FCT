@@ -2,6 +2,8 @@ package com.pasantia.pasantia.security
 
 import com.pasantia.pasantia.repositories.SchoolAdminRepository
 import com.pasantia.pasantia.repositories.SchoolTutorRepository
+import com.pasantia.pasantia.repositories.CompanyAdminRepository
+import com.pasantia.pasantia.repositories.CompanyTutorRepository
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import io.jsonwebtoken.security.Keys
@@ -20,8 +22,9 @@ class JwtTokenProvider(
     private val expirationMs: Long,
 
     private val schoolAdminRepository: SchoolAdminRepository,
-    private val schoolTutorRepository: SchoolTutorRepository
-
+    private val schoolTutorRepository: SchoolTutorRepository,
+    private val companyAdminRepository: CompanyAdminRepository,
+    private val companyTutorRepository: CompanyTutorRepository
 ) {
 
     private val secretKey: SecretKey = Keys.hmacShaKeyFor(secret.toByteArray(Charsets.UTF_8))
@@ -30,21 +33,42 @@ class JwtTokenProvider(
         val now = Date()
         val expiry = Date(now.time + expirationMs)
 
-        // 🔥 Buscar escuela asignada al usuario (admin escolar o tutor escolar)
-        val schoolId =
-            schoolAdminRepository.findByUserId(userId)?.school?.id
-                ?: schoolTutorRepository.findByUserId(userId)?.school?.id
-
-        // 🔥 Transformar roles a ROLE_XYZ para que Spring los entienda
+        // Normalizar roles -> siempre ROLE_X
         val springRoles = roles.map { role ->
             if (role.startsWith("ROLE_")) role else "ROLE_$role"
         }
 
+        var schoolId: UUID? = null
+        var companyId: UUID? = null
+
+        // ============================================
+        // 🔵 SCHOOL_ADMIN / SCHOOL_TUTOR → schoolId
+        // ============================================
+        if (springRoles.contains("ROLE_SCHOOL_ADMIN") ||
+            springRoles.contains("ROLE_SCHOOL_TUTOR")
+        ) {
+            schoolId =
+                schoolAdminRepository.findByUserId(userId)?.school?.id
+                    ?: schoolTutorRepository.findByUserId(userId)?.school?.id
+        }
+
+        // ============================================
+        // 🔵 COMPANY_ADMIN / COMPANY_TUTOR → companyId
+        // ============================================
+        if (springRoles.contains("ROLE_COMPANY_ADMIN") ||
+            springRoles.contains("ROLE_COMPANY_TUTOR")
+        ) {
+            companyId =
+                companyAdminRepository.findByUserId(userId)?.company?.id
+                    ?: companyTutorRepository.findByUserId(userId)?.company?.id
+        }
+
         return Jwts.builder()
             .setSubject(email)
-            .claim("roles", springRoles)   // ⬅️ AQUÍ ESTÁ EL FIX
+            .claim("roles", springRoles)
             .claim("userId", userId.toString())
             .claim("schoolId", schoolId?.toString())
+            .claim("companyId", companyId?.toString())
             .setIssuedAt(now)
             .setExpiration(expiry)
             .signWith(secretKey, SignatureAlgorithm.HS256)
@@ -68,7 +92,8 @@ class JwtTokenProvider(
             .setSigningKey(secretKey)
             .build()
             .parseClaimsJws(token)
-            .body.subject
+            .body
+            .subject
 
     fun getRolesFromToken(token: String): List<String> =
         Jwts.parserBuilder()

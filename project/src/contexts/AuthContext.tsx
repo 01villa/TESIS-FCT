@@ -1,3 +1,4 @@
+// src/contexts/AuthContext.tsx
 import { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
@@ -20,27 +21,18 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
 });
 
-// Base URL global
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
 
 export const AuthProvider = ({ children }: { children: any }) => {
-  // 🔥 Carga instantánea desde localStorage (sin flashes, sin re-render)
   const [token, setToken] = useState(() => localStorage.getItem("token"));
-
   const [user, setUser] = useState<any>(() => {
     const raw = localStorage.getItem("user");
     return raw ? JSON.parse(raw) : null;
   });
-
-  const [role, setRole] = useState<string | null>(() =>
-    localStorage.getItem("role")
-  );
-
+  const [role, setRole] = useState<string | null>(() => localStorage.getItem("role"));
   const [loadingAuth, setLoadingAuth] = useState(true);
 
-  // ---------------------------------------------------
-  // 1) Configurar axios
-  // ---------------------------------------------------
+  // ============= CONFIG AXIOS =============
   useEffect(() => {
     axios.defaults.baseURL = API_URL;
 
@@ -48,61 +40,53 @@ export const AuthProvider = ({ children }: { children: any }) => {
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     }
 
-    // terminar carga
     setLoadingAuth(false);
   }, []);
 
-  // Cuando cambia el token dinámicamente
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      localStorage.setItem("token", token);
     } else {
       delete axios.defaults.headers.common["Authorization"];
+      localStorage.removeItem("token");
     }
   }, [token]);
 
-  // ---------------------------------------------------
-  // 2) LOGIN
-  // ---------------------------------------------------
+  // ============= LOGIN =============
   const login = async (email: string, password: string) => {
-  const res = await axios.post("/auth/login", { email, password });
+    const res = await axios.post("/auth/login", { email, password });
+    const data = res.data;
 
-  const data = res.data;
+    const decoded: any = jwtDecode(data.token);
 
-  // 🔥 Decodificar el token JWT
-  const decoded: any = jwtDecode(data.token);
+    const firstRole =
+      Array.isArray(data.user?.roles) && data.user.roles.length > 0
+        ? data.user.roles[0]
+        : decoded.roles?.[0] ?? null;
 
-  // obtener el primer rol del backend
-  const firstRole =
-    Array.isArray(data.user?.roles) && data.user.roles.length > 0
-      ? data.user.roles[0]
-      : decoded.role ?? null;
+    const userFinal: any = {
+      id: data.user?.id,
+      fullName: data.user?.fullName,
+      role: firstRole,
+    };
 
-  // 🔥 Construir el objeto user completo
-  const userFinal = {
-    id: data.user?.id,
-    fullName: data.user?.fullName,
-    role: firstRole,
-    schoolId: decoded.schoolId ?? null, // 🔥 AQUI LA MAGIA
+    if (decoded.schoolId) userFinal.schoolId = decoded.schoolId;
+    if (decoded.companyId) userFinal.companyId = decoded.companyId;
+
+    setToken(data.token);
+    setUser(userFinal);
+    setRole(firstRole);
+
+    localStorage.setItem("user", JSON.stringify(userFinal));
+    if (firstRole) localStorage.setItem("role", firstRole);
   };
 
-  // Guardar estado
-  setToken(data.token);
-  setUser(userFinal);
-  setRole(firstRole);
-
-  // Persistencia
-  localStorage.setItem("token", data.token);
-  localStorage.setItem("user", JSON.stringify(userFinal));
-  if (firstRole) localStorage.setItem("role", firstRole);
-};
-  // ---------------------------------------------------
-  // 3) LOGOUT
-  // ---------------------------------------------------
+  // ============= LOGOUT =============
   const logout = () => {
     setToken(null);
-    setRole(null);
     setUser(null);
+    setRole(null);
 
     localStorage.removeItem("token");
     localStorage.removeItem("user");

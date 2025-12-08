@@ -7,7 +7,7 @@ import java.util.*
 
 interface CompanyAdminRepository : JpaRepository<CompanyAdmin, UUID> {
 
-    fun findByUser(user: User): CompanyAdmin?
+    fun findByUserId(user_id: UUID): CompanyAdmin?
 
     fun findAllByActiveTrue(): List<CompanyAdmin>
 

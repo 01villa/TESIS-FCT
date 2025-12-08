@@ -2,6 +2,7 @@ package com.pasantia.pasantia.security
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpMethod
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -26,73 +27,122 @@ class SecurityConfig(
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { it ->
 
-                // ---------------------------
-                // PÚBLICO
-                // ---------------------------
+                // -------------------------------------------------
+                // PUBLIC
+                // -------------------------------------------------
                 it.requestMatchers("/auth/**").permitAll()
 
-                // ---------------------------
-                // ADMIN GENERAL (CRUD GLOBAL)
-                // ---------------------------
-                it.requestMatchers(
-                    "/students/**"
-                ).hasRole("ADMIN")
+                // ============================
+                // ADMIN GENERAL
+                // ============================
+                it.requestMatchers("/students/**")
+                    .hasRole("ADMIN")
 
-                // ---------------------------
-                // COLEGIOS (Admin + SchoolAdmin)
-                // ---------------------------
-                it.requestMatchers("/schools/**")
-                    .hasAnyRole("ADMIN", "SCHOOL_ADMIN")
+                // ============================
+                // COLEGIOS
+                // ============================
 
+                // CRUD completo solo para ADMIN + SCHOOL_ADMIN
                 it.requestMatchers(
                     "/admin/schools/**",
                     "/admin/school-admins/**",
                     "/admin/school-tutors/**"
                 ).hasAnyRole("ADMIN", "SCHOOL_ADMIN")
 
-                // ---------------------------
-                // STUDENTS también para SCHOOL_TUTOR
-                // ---------------------------
+                // Listado general
+                it.requestMatchers("/schools/**")
+                    .hasAnyRole("ADMIN", "SCHOOL_ADMIN")
+
+                // Students administración
                 it.requestMatchers("/admin/students/**")
                     .hasAnyRole("ADMIN", "SCHOOL_ADMIN", "SCHOOL_TUTOR")
 
-                // ---------------------------
-                // EMPRESAS
-                // ---------------------------
-                it.requestMatchers("/companies", "/companies/**")
-                    .hasRole("ADMIN")
-                // ---------------------------
-                // VACANTES (globalmente accesibles)
-                // ---------------------------
-                it.requestMatchers("/vacancies/**")
-                    .hasAnyRole("ADMIN", "SCHOOL_TUTOR", "COMPANY_TUTOR", "STUDENT")
 
-                // ---------------------------
+                // ============================
+                // EMPRESAS
+                // ============================
+
+                // CRUD total de empresas
+                it.requestMatchers("/admin/companies/**")
+                    .hasAnyRole("ADMIN", "COMPANY_ADMIN")
+
+                // Panel personal empresa
+                it.requestMatchers("/company/**")
+                    .hasRole("COMPANY_ADMIN")
+
+
+                // ============================
+                // VACANTES
+                // ============================
+
+                // Crear vacante
+                it.requestMatchers(HttpMethod.POST, "/vacancies/company/**")
+                    .hasAnyRole("COMPANY_ADMIN", "COMPANY_TUTOR", "ADMIN")
+
+                // Listado general abierto para todos estos roles
+                it.requestMatchers(HttpMethod.GET, "/vacancies")
+                    .hasAnyRole("ADMIN", "SCHOOL_TUTOR", "COMPANY_ADMIN", "COMPANY_TUTOR", "STUDENT")
+
+                // Listado por empresa
+                it.requestMatchers(HttpMethod.GET, "/vacancies/company/**")
+                    .hasAnyRole("COMPANY_ADMIN", "COMPANY_TUTOR", "ADMIN")
+
+                // Detalle de vacante
+                it.requestMatchers(HttpMethod.GET, "/vacancies/**")
+                    .hasAnyRole("ADMIN", "SCHOOL_TUTOR", "COMPANY_ADMIN", "COMPANY_TUTOR", "STUDENT")
+
+                // Editar / cerrar / abrir
+                it.requestMatchers(HttpMethod.PUT, "/vacancies/**")
+                    .hasAnyRole("COMPANY_ADMIN", "COMPANY_TUTOR", "ADMIN")
+
+                it.requestMatchers(HttpMethod.PATCH, "/vacancies/**")
+                    .hasAnyRole("COMPANY_ADMIN", "COMPANY_TUTOR", "ADMIN")
+
+                it.requestMatchers(HttpMethod.DELETE, "/vacancies/**")
+                    .hasAnyRole("COMPANY_ADMIN", "COMPANY_TUTOR", "ADMIN")
+
+
+                // ============================
                 // TUTOR ESCOLAR
-                // ---------------------------
+                // ============================
                 it.requestMatchers(
                     "/applications/school-tutor/**",
                     "/applications/assign"
                 ).hasRole("SCHOOL_TUTOR")
 
-                // ---------------------------
-                // TUTOR EMPRESA
-                // ---------------------------
-                it.requestMatchers(
-                    "/applications/company-tutor/**"
-                ).hasRole("COMPANY_TUTOR")
 
-                // ---------------------------
-                // ESTUDIANTE
-                // ---------------------------
+                // ============================
+                // TUTOR EMPRESA
+                // ============================
+                it.requestMatchers("/applications/company-tutor/**")
+                    .hasRole("COMPANY_TUTOR")
+
+
+                // ============================
+                // STUDENT
+                // ============================
                 it.requestMatchers(
                     "/student/**",
                     "/applications/student/**"
                 ).hasRole("STUDENT")
 
-                // ---------------------------
-                // EL RESTO
-                // ---------------------------
+
+                // ============================
+                // API NUEVOS (studentsApi / usersApi)
+                // ============================
+
+                // GET /students   ← listado básico general
+                it.requestMatchers(HttpMethod.GET, "/students")
+                    .hasAnyRole("ADMIN", "SCHOOL_ADMIN", "SCHOOL_TUTOR", "COMPANY_ADMIN", "COMPANY_TUTOR")
+
+                // GET /users/basic
+                it.requestMatchers(HttpMethod.GET, "/users/basic")
+                    .hasAnyRole("ADMIN", "SCHOOL_ADMIN", "SCHOOL_TUTOR", "COMPANY_ADMIN", "COMPANY_TUTOR")
+
+
+                // ============================
+                // DEFAULT
+                // ============================
                 it.anyRequest().authenticated()
             }
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter::class.java)

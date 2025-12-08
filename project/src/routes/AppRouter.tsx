@@ -1,3 +1,5 @@
+// src/router/AppRouter.tsx
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import LandingPage from "../pages/LandingPage";
@@ -6,7 +8,7 @@ import Login from "../modules/auth/Login";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import ProtectedRoute from "../router/ProtectedRoute";
 
-// DASHBOARD HOME
+// HOME POR ROL
 import DashboardHome from "../pages/dashboard/DashboardHome";
 
 // USERS
@@ -24,19 +26,30 @@ import TutorAssign from "../pages/tutor/TutorAssign";
 import TutorAssignments from "../pages/tutor/TutorAssignments";
 import TutorStudentsPage from "../pages/tutor/TutorStudentsPage";
 
-// COMPANIES (CRUD + panel interno)
+// EMPRESAS – ADMIN GENERAL
 import CompanyDashboard from "../pages/companies/CompanyDashboard";
 import CompanyDetails from "../pages/companies/CompanyDetails";
+
+// COMPANY ADMIN (perfil de empresa)
+import CompanyProfile from "../pages/companies/CompanyProfile";
+import AssignmentsList from "../pages/companies/companyTutor/AssignmentsList";
+import CompanyTutorDashboard from "../pages/companies/companyTutor/CompanyTutorDashboard";
+import CompanyVacancies from "../pages/companies/companyTutor/CompanyVacancies";
+
+// ============================
+//  COMPANY TUTOR (NUEVO)
+// ============================
 
 export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* PÚBLICAS */}
+
+        {/* 🔓 PUBLIC ROUTES */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
 
-        {/* PROTEGIDAS */}
+        {/* 🔐 PROTECTED ROUTES */}
         <Route
           path="/dashboard"
           element={
@@ -45,29 +58,42 @@ export default function AppRouter() {
             </ProtectedRoute>
           }
         >
-          {/* HOME DEFAULT PARA ADMIN */}
+          {/* HOME AUTOMÁTICO SEGÚN ROL */}
           <Route index element={<DashboardHome />} />
 
-          {/* ADMIN */}
+          {/* ADMIN GENERAL */}
           <Route path="users" element={<UsersPage />} />
 
           {/* COLEGIOS */}
           <Route path="schools" element={<SchoolList />} />
           <Route path="schools/:id" element={<SchoolDetails />} />
 
-          {/* PANEL ESCUELA (ADMIN ESCOLAR) */}
+          {/* SCHOOL ADMIN */}
           <Route path="school" element={<SchoolDashboard />} />
 
-          {/* COMPANIES */}
+          {/* EMPRESAS – ADMIN GENERAL */}
           <Route path="companies" element={<CompanyDashboard />} />
           <Route path="companies/:id" element={<CompanyDetails />} />
 
-          {/* TUTOR ESCOLAR */}
+          {/* COMPANY ADMIN */}
+          <Route path="company" element={<CompanyProfile />} />
+
+          {/* ========================================================
+                SCHOOL TUTOR (FUNCIONALES)
+             ======================================================== */}
           <Route path="tutor" element={<TutorHome />} />
           <Route path="tutor/vacancies" element={<TutorVacancies />} />
           <Route path="tutor/assign" element={<TutorAssign />} />
           <Route path="tutor/assignments" element={<TutorAssignments />} />
           <Route path="tutor/students" element={<TutorStudentsPage />} />
+
+          {/* ========================================================
+                COMPANY TUTOR (NUEVO - lo que hicimos)
+             ======================================================== */}
+          <Route path="company-tutor" element={<CompanyTutorDashboard />} />
+          <Route path="company-tutor/vacancies" element={<CompanyVacancies />} />
+          <Route path="company-tutor/assignments" element={<AssignmentsList />} />
+
         </Route>
 
         {/* 404 */}

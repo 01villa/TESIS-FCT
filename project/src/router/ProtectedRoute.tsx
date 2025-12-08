@@ -1,17 +1,32 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { ReactNode } from "react";
 
-export default function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { token, loadingAuth } = useAuth();
+export default function ProtectedRoute({ children }: any) {
+  const { user, loadingAuth } = useAuth();
+  const location = useLocation();
 
-  if (loadingAuth) {
-    return <div>Cargando...</div>;
+  // ⛔ Evita pantalla en blanco
+  if (loadingAuth) return <div>Cargando...</div>;
+
+  // ⛔ Usuario no logueado
+  if (!user) return <Navigate to="/login" replace />;
+
+  const role = user.role;
+
+  const redirectByRole: any = {
+    ADMIN: "/dashboard",
+    SCHOOL_ADMIN: "/dashboard/school",
+    SCHOOL_TUTOR: "/dashboard/tutor",
+    COMPANY_ADMIN: "/dashboard/company",
+    COMPANY_TUTOR: "/dashboard/company-tutor",
+  };
+
+  const target = redirectByRole[role] ?? "/dashboard";
+
+  // ⛔ Evita redirect infinito → solo redirige si REALMENTE estás en la raíz
+  if (location.pathname === "/dashboard" && target !== "/dashboard") {
+    return <Navigate to={target} replace />;
   }
 
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
+  return children ? children : <Outlet />;
 }
