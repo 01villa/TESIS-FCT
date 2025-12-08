@@ -29,21 +29,21 @@ export default function DashboardHome() {
   const { user, role } = useAuth();
   const navigate = useNavigate();
 
-  // -----------------------------------------------------
-  //  🚨 EVITAR QUE SCHOOL_ADMIN VEA ESTE DASHBOARD
-  // -----------------------------------------------------
+  // 1️⃣ Redirección por rol SOLO aquí
   useEffect(() => {
     if (!role) return;
 
-    if (role === "SCHOOL_ADMIN") {
-      navigate("/dashboard/school"); // redirección inmediata
-    }
-  }, [role]);
+    const redirects: Record<string, string> = {
+      SCHOOL_ADMIN: "/dashboard/school",
+      SCHOOL_TUTOR: "/dashboard/tutor",
+      STUDENT: "/dashboard/applications",
+      COMPANY_TUTOR: "/dashboard/company-assignments",
+    };
 
-  // Si el rol es SCHOOL_ADMIN → NO RENDERIZAR NADA
-  if (role === "SCHOOL_ADMIN") return null;
-  // -----------------------------------------------------
+    if (redirects[role]) navigate(redirects[role]);
+  }, [role, navigate]);
 
+  // 2️⃣ Estado del dashboard
   const [stats, setStats] = useState<DashboardStats>({
     vacancies: 0,
     students: 0,
@@ -54,6 +54,7 @@ export default function DashboardHome() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 3️⃣ Cargar datos
   useEffect(() => {
     let cancelled = false;
 
@@ -72,16 +73,13 @@ export default function DashboardHome() {
         if (cancelled) return;
 
         setStats({
-          vacancies: Array.isArray(vacanciesRes.data) ? vacanciesRes.data.length : 0,
-          students: Array.isArray(studentsRes.data) ? studentsRes.data.length : 0,
-          companies: Array.isArray(companiesRes.data) ? companiesRes.data.length : 0,
-          schools: Array.isArray(schoolsRes.data) ? schoolsRes.data.length : 0,
+          vacancies: vacanciesRes.data?.length ?? 0,
+          students: studentsRes.data?.length ?? 0,
+          companies: companiesRes.data?.length ?? 0,
+          schools: schoolsRes.data?.length ?? 0,
         });
       } catch (err) {
-        console.error("Error cargando estadísticas del dashboard", err);
-        if (!cancelled) {
-          setError("No se pudieron cargar las estadísticas (se muestran en 0).");
-        }
+        if (!cancelled) setError("No se pudieron cargar las estadísticas.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -100,7 +98,6 @@ export default function DashboardHome() {
     );
   }
 
-  // 🌟 (Tu contenido se mantiene igual a partir de aquí)
   return (
     <Box>
       <Box mb={10}>
@@ -123,28 +120,11 @@ export default function DashboardHome() {
         <StatCard label="Empresas asociadas" value={stats.companies} change="+0%" />
         <StatCard label="Escuelas registradas" value={stats.schools} change="+0%" />
       </SimpleGrid>
-
-      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-        <Box p={6} rounded="lg" shadow="md" bg={useColorModeValue("white", "gray.800")}>
-          <Heading size="md" mb={4}>
-            Actividad reciente
-          </Heading>
-          <Box color="gray.500">Próximamente gráfico...</Box>
-        </Box>
-
-        <Box p={6} rounded="lg" shadow="md" bg={useColorModeValue("white", "gray.800")}>
-          <Heading size="md" mb={4}>
-            Resumen general
-          </Heading>
-
-          <Box color="gray.500">Módulo pendiente...</Box>
-        </Box>
-      </SimpleGrid>
     </Box>
   );
 }
 
-/* COMPONENTE DE TARJETAS */
+/*📌 Componente de tarjeta */
 function StatCard({
   label,
   value,

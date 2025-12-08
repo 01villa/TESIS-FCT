@@ -19,23 +19,26 @@ import {
   FaBuilding,
   FaUsers,
   FaFileAlt,
-  FaTasks,
-  FaBriefcase,
-  FaCheckCircle,
 } from "react-icons/fa";
+
+type MenuItem = {
+  label: string;
+  to: string;
+  icon: any;
+};
 
 export default function Sidebar() {
   const { role, logout } = useAuth();
   const { colorMode, toggleColorMode } = useColorMode();
 
-  // MENÚ POR ROL
-  const menuByRole: any = {
+  // Menús por rol
+  const menuByRole: Record<string, MenuItem[]> = {
     ADMIN: [
       { label: "Inicio", to: "/dashboard", icon: FaHome },
       { label: "Colegios", to: "/dashboard/schools", icon: FaSchool },
       { label: "Empresas", to: "/dashboard/companies", icon: FaBuilding },
       { label: "Usuarios", to: "/dashboard/users", icon: FaUsers },
-      { label: "Reportes", to: "/dashboard/reports", icon: FaFileAlt },
+      { label: "Reportes", to: "/dashboard/reports", icon: FaFileAlt }, // luego lo armas
     ],
 
     SCHOOL_ADMIN: [
@@ -44,22 +47,33 @@ export default function Sidebar() {
 
     SCHOOL_TUTOR: [
       { label: "Inicio", to: "/dashboard/tutor", icon: FaHome },
-      { label: "Vacantes", to: "/dashboard/tutor/vacancies", icon: FaBriefcase },
-      { label: "Asignar Estudiante", to: "/dashboard/tutor/assign", icon: FaTasks },
-      { label: "Mis Asignaciones", to: "/dashboard/tutor/assignments", icon: FaCheckCircle },
+      { label: "Estudiantes", to: "/dashboard/tutor/students", icon: FaUsers },
+      { label: "Vacantes", to: "/dashboard/tutor/vacancies", icon: FaBuilding },
+      { label: "Asignar estudiante", to: "/dashboard/tutor/assign", icon: FaFileAlt },
+      { label: "Mis asignaciones", to: "/dashboard/tutor/assignments", icon: FaFileAlt },
+    ],
+
+    // 🔹 Menú para COMPANY_ADMIN (lo mínimo funcional de momento)
+    COMPANY_ADMIN: [
+      { label: "Inicio", to: "/dashboard", icon: FaHome },
+      { label: "Mi empresa", to: "/dashboard/companies", icon: FaBuilding },
+      // luego puedes separar vista específica tipo /dashboard/company
     ],
 
     COMPANY_TUTOR: [
-      { label: "Vacantes", to: "/dashboard/vacancies", icon: FaBuilding },
-      { label: "Estudiantes", to: "/dashboard/company-assignments", icon: FaUsers },
+      { label: "Vacantes", to: "/dashboard/company/vacancies", icon: FaBuilding },
+      { label: "Estudiantes asignados", to: "/dashboard/company/assignments", icon: FaUsers },
     ],
 
     STUDENT: [
-      { label: "Mis Aplicaciones", to: "/dashboard/applications", icon: FaFileAlt },
+      { label: "Vacantes disponibles", to: "/dashboard/vacancies", icon: FaBuilding },
+      { label: "Mis aplicaciones", to: "/dashboard/applications", icon: FaFileAlt },
     ],
   };
 
-  const menu = menuByRole[role ?? "ADMIN"];
+  // Normalizar rol (por si viene como "ROLE_ADMIN")
+  const normalizedRole = (role || "ADMIN").replace(/^ROLE_/, "");
+  const menu = menuByRole[normalizedRole] ?? menuByRole["ADMIN"];
 
   const bgSidebar = useColorModeValue("gray.50", "gray.800");
   const borderColor = useColorModeValue("gray.200", "gray.700");
@@ -92,7 +106,7 @@ export default function Sidebar() {
 
       {/* MENÚ */}
       <VStack align="stretch" spacing={2}>
-        {menu.map((item: any) => (
+        {menu.map((item) => (
           <Button
             key={item.to}
             as={Link}

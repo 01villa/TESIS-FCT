@@ -11,6 +11,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
+
 @Configuration
 class SecurityConfig(
     private val jwtAuthFilter: JwtAuthFilter
@@ -18,11 +19,12 @@ class SecurityConfig(
 
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
+
         http
             .cors { it.configurationSource(corsConfig()) }
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
-            .authorizeHttpRequests {
+            .authorizeHttpRequests { it ->
 
                 // ---------------------------
                 // PÚBLICO
@@ -30,42 +32,47 @@ class SecurityConfig(
                 it.requestMatchers("/auth/**").permitAll()
 
                 // ---------------------------
-                // ADMIN GENERAL
+                // ADMIN GENERAL (CRUD GLOBAL)
                 // ---------------------------
                 it.requestMatchers(
-                    "/students/**",
-                    "/applications/**",
-                    "/vacancies/**"
+                    "/students/**"
                 ).hasRole("ADMIN")
 
                 // ---------------------------
-                // ESCUELAS
+                // COLEGIOS (Admin + SchoolAdmin)
                 // ---------------------------
                 it.requestMatchers("/schools/**")
                     .hasAnyRole("ADMIN", "SCHOOL_ADMIN")
 
-                // ADMINISTRACIÓN DE ESCUELAS
                 it.requestMatchers(
                     "/admin/schools/**",
                     "/admin/school-admins/**",
-                    "/admin/school-tutors/**",
-                    "/admin/students/**"
+                    "/admin/school-tutors/**"
                 ).hasAnyRole("ADMIN", "SCHOOL_ADMIN")
+
+                // ---------------------------
+                // STUDENTS también para SCHOOL_TUTOR
+                // ---------------------------
+                it.requestMatchers("/admin/students/**")
+                    .hasAnyRole("ADMIN", "SCHOOL_ADMIN", "SCHOOL_TUTOR")
 
                 // ---------------------------
                 // EMPRESAS
                 // ---------------------------
-                it.requestMatchers("/companies/**")
-                    .hasAnyRole("ADMIN", "COMPANY_ADMIN")
-
-                it.requestMatchers("/admin/companies/**")
-                    .hasAnyRole("ADMIN", "COMPANY_ADMIN")
+                it.requestMatchers("/companies", "/companies/**")
+                    .hasRole("ADMIN")
+                // ---------------------------
+                // VACANTES (globalmente accesibles)
+                // ---------------------------
+                it.requestMatchers("/vacancies/**")
+                    .hasAnyRole("ADMIN", "SCHOOL_TUTOR", "COMPANY_TUTOR", "STUDENT")
 
                 // ---------------------------
                 // TUTOR ESCOLAR
                 // ---------------------------
                 it.requestMatchers(
-                    "/applications/school-tutor/**"
+                    "/applications/school-tutor/**",
+                    "/applications/assign"
                 ).hasRole("SCHOOL_TUTOR")
 
                 // ---------------------------
@@ -84,7 +91,7 @@ class SecurityConfig(
                 ).hasRole("STUDENT")
 
                 // ---------------------------
-                // RESTO
+                // EL RESTO
                 // ---------------------------
                 it.anyRequest().authenticated()
             }
@@ -107,7 +114,6 @@ class SecurityConfig(
 
         val source = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", config)
-
         return source
     }
 

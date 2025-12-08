@@ -62,7 +62,6 @@ class CompanyController(
     @PatchMapping("/{id}/restore")
     fun restore(@PathVariable id: UUID) =
         ResponseEntity.ok(companyService.restore(id))
-
     @PostMapping("/{id}/admin")
     fun createCompanyAdmin(
         @PathVariable id: UUID,
@@ -71,4 +70,5 @@ class CompanyController(
         val result = companyAdminService.createCompanyAdmin(id, dto)
         return ResponseEntity.ok(result)
     }
+
 }

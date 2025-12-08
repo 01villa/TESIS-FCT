@@ -4,24 +4,34 @@ import LandingPage from "../pages/LandingPage";
 import Login from "../modules/auth/Login";
 
 import DashboardLayout from "../components/layout/DashboardLayout";
+import ProtectedRoute from "../router/ProtectedRoute";
 
+// DASHBOARD HOME
 import DashboardHome from "../pages/dashboard/DashboardHome";
+
+// USERS
 import UsersPage from "../pages/users/UsersPage";
+
+// SCHOOLS
 import SchoolList from "../pages/colegios/SchoolList";
 import SchoolDetails from "../pages/colegios/SchoolDetails";
 import SchoolDashboard from "../pages/colegios/SchoolDashboard";
-import ProtectedRoute from "../router/ProtectedRoute";
-import TutorAssign from "../pages/tutor/TutorAssign";
-import TutorAssignments from "../pages/tutor/TutorAssignments";
+
+// TUTOR ESCOLAR
 import TutorHome from "../pages/tutor/TutorHome";
 import TutorVacancies from "../pages/tutor/TutorVacancies";
+import TutorAssign from "../pages/tutor/TutorAssign";
+import TutorAssignments from "../pages/tutor/TutorAssignments";
+import TutorStudentsPage from "../pages/tutor/TutorStudentsPage";
 
+// COMPANIES (CRUD + panel interno)
+import CompanyDashboard from "../pages/companies/CompanyDashboard";
+import CompanyDetails from "../pages/companies/CompanyDetails";
 
 export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-
         {/* PÚBLICAS */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
@@ -40,17 +50,24 @@ export default function AppRouter() {
 
           {/* ADMIN */}
           <Route path="users" element={<UsersPage />} />
+
+          {/* COLEGIOS */}
           <Route path="schools" element={<SchoolList />} />
           <Route path="schools/:id" element={<SchoolDetails />} />
 
-          {/* SCHOOL ADMIN — 👉 ESTA ES LA IMPORTANTE */}
+          {/* PANEL ESCUELA (ADMIN ESCOLAR) */}
           <Route path="school" element={<SchoolDashboard />} />
 
-          {/* SCHOOL TUTOR */}
+          {/* COMPANIES */}
+          <Route path="companies" element={<CompanyDashboard />} />
+          <Route path="companies/:id" element={<CompanyDetails />} />
+
+          {/* TUTOR ESCOLAR */}
           <Route path="tutor" element={<TutorHome />} />
           <Route path="tutor/vacancies" element={<TutorVacancies />} />
           <Route path="tutor/assign" element={<TutorAssign />} />
           <Route path="tutor/assignments" element={<TutorAssignments />} />
+          <Route path="tutor/students" element={<TutorStudentsPage />} />
         </Route>
 
         {/* 404 */}

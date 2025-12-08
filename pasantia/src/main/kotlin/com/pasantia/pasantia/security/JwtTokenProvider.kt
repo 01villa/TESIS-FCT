@@ -1,6 +1,7 @@
 package com.pasantia.pasantia.security
 
 import com.pasantia.pasantia.repositories.SchoolAdminRepository
+import com.pasantia.pasantia.repositories.SchoolTutorRepository
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import io.jsonwebtoken.security.Keys
@@ -18,7 +19,9 @@ class JwtTokenProvider(
     @Value("\${jwt.expiration}")
     private val expirationMs: Long,
 
-    private val schoolAdminRepository: SchoolAdminRepository
+    private val schoolAdminRepository: SchoolAdminRepository,
+    private val schoolTutorRepository: SchoolTutorRepository
+
 ) {
 
     private val secretKey: SecretKey = Keys.hmacShaKeyFor(secret.toByteArray(Charsets.UTF_8))
@@ -27,12 +30,19 @@ class JwtTokenProvider(
         val now = Date()
         val expiry = Date(now.time + expirationMs)
 
-        // 🔥 Buscar escuela asignada al usuario
-        val schoolId = schoolAdminRepository.findByUserId(userId)?.school?.id
+        // 🔥 Buscar escuela asignada al usuario (admin escolar o tutor escolar)
+        val schoolId =
+            schoolAdminRepository.findByUserId(userId)?.school?.id
+                ?: schoolTutorRepository.findByUserId(userId)?.school?.id
+
+        // 🔥 Transformar roles a ROLE_XYZ para que Spring los entienda
+        val springRoles = roles.map { role ->
+            if (role.startsWith("ROLE_")) role else "ROLE_$role"
+        }
 
         return Jwts.builder()
             .setSubject(email)
-            .claim("roles", roles)
+            .claim("roles", springRoles)   // ⬅️ AQUÍ ESTÁ EL FIX
             .claim("userId", userId.toString())
             .claim("schoolId", schoolId?.toString())
             .setIssuedAt(now)

@@ -51,4 +51,6 @@ class SchoolTutorController(
     @PatchMapping("/{id}/restore")
     fun restore(@PathVariable id: UUID) =
         ResponseEntity.ok(service.restore(id))
+
+
 }
