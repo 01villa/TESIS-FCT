@@ -138,8 +138,13 @@ export default function AssignmentsList() {
                       </Text>
 
                       <Text fontSize="sm" color="gray.600">
-                        Aplicó: {app.appliedAt?.split("T")[0]}
+                      Inicio: {app.vacancyStartDate ?? "—"}
                       </Text>
+
+                  <Text fontSize="sm" color="gray.600">
+                   Fin: {app.vacancyEndDate ?? "—"}
+                  </Text>
+
                     </Box>
                   </HStack>
 

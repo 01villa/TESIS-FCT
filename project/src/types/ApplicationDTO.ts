@@ -1,40 +1,30 @@
-// src/types/ApplicationDTO.ts
-
 export interface ApplicationDTO {
   id: string;
 
-  // VACANTE
   vacancyId: string;
   vacancyTitle: string;
-  vacancyStartDate?: string;   // <-- NUEVO
-  vacancyEndDate?: string;     // <-- NUEVO
+  companyId: string;
+  companyName: string;
 
-  // EMPRESA (opcional si lo usas)
-  companyId?: string;
-  companyName?: string;
+  vacancyStartDate?: string;  // NUEVO
+  vacancyEndDate?: string;    // NUEVO
 
-  // ESTUDIANTE
   studentId: string;
   studentFullName: string;
 
-  // TUTOR ESCOLAR
-  schoolTutorId: string;
-  schoolTutorName: string;
-
-  // TUTOR EMPRESA (opcional)
-  companyTutorId?: string;
-  companyTutorName?: string;
-
-  // INFO COMPLEMENTARIA DEL ESTUDIANTE (merge desde student + user)
   studentCi?: string;
   studentPhone?: string;
   studentEmail?: string;
 
-  // ESTADO Y FECHAS
-  appliedAt: string;  // ISO
-  updatedAt?: string;
-  status: number;     // 1=PENDIENTE, 2=APROBADA, 3=RECHAZADA, 4=FINALIZADA
+  schoolTutorId: string;
+  schoolTutorName: string;
 
+  companyTutorId?: string;
+  companyTutorName?: string;
+
+  status: number;
   notes?: string;
-  active?: boolean;
+  active: boolean;
+  appliedAt?: string;
+  updatedAt?: string;
 }

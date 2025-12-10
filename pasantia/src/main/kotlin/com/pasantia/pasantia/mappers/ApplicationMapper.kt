@@ -13,13 +13,15 @@ object ApplicationMapper {
         companyId = a.vacancy.company.id,
         companyName = a.vacancy.company.name,
 
+        vacancyStartDate = a.vacancy.startDate,  // NUEVO
+        vacancyEndDate = a.vacancy.endDate,      // NUEVO
+
         studentId = a.student.id,
         studentFullName = a.student.fullName,
 
-        // ⭐ EXTRAIDOS DE STUDENT Y USER
         studentCi = a.student.ci,
         studentPhone = a.student.phone,
-        studentEmail = a.student.user.email,
+        studentEmail = a.student.user?.email,
 
         schoolTutorId = a.schoolTutor.id!!,
         schoolTutorName = a.schoolTutor.fullName,
@@ -33,4 +35,5 @@ object ApplicationMapper {
         appliedAt = a.appliedAt,
         updatedAt = a.updatedAt
     )
+
 }
