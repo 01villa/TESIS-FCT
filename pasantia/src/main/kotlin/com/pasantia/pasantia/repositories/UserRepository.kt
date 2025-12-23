@@ -19,7 +19,7 @@ interface UserRepository : JpaRepository<User, UUID> {
 
     fun findAllByActiveTrue(): List<User>
     fun findByIdAndActiveTrue(id: UUID): User?
-
+    fun findAllByActiveFalse(): List<User>
 
     /** ============================
      *  ADMINS DE ESCUELA (solo activos)

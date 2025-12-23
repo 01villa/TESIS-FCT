@@ -40,6 +40,9 @@ open class User(
     @Column
     override var deletedAt: LocalDateTime? = null,
 
+    @Column(name = "photo_url")
+    var photoUrl: String? = null,
+
     // ============================
     // Audit
     // ============================

@@ -14,8 +14,8 @@ class StudentController(
 ) {
 
     // ========================================================
-    // CREATE STUDENT (Admin o SchoolAdmin)
-    // Ruta correcta: POST /admin/students/school/{schoolId}
+    // CREATE STUDENT
+    // POST /admin/students/school/{schoolId}
     // ========================================================
     @PostMapping("/school/{schoolId}")
     fun createStudent(
@@ -60,14 +60,14 @@ class StudentController(
     ) = ResponseEntity.ok(studentService.updateStudent(id, dto))
 
     // ========================================================
-    // SOFT DELETE
+    // DELETE STUDENT (SOFT DELETE REAL)
     // DELETE /admin/students/{id}
     // ========================================================
     @DeleteMapping("/{id}")
     fun deleteStudent(
         @PathVariable id: UUID
     ): ResponseEntity<Void> {
-        studentService.softDelete(id)
+        studentService.deleteStudent(id)
         return ResponseEntity.noContent().build()
     }
 
@@ -78,5 +78,8 @@ class StudentController(
     @PatchMapping("/{id}/restore")
     fun restoreStudent(
         @PathVariable id: UUID
-    ) = ResponseEntity.ok(studentService.restore(id))
+    ): ResponseEntity<Void> {
+        studentService.restore(id)
+        return ResponseEntity.noContent().build()
+    }
 }

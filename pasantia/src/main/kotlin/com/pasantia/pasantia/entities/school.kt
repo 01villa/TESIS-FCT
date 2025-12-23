@@ -24,6 +24,8 @@ data class School(
     @Column(length = 200)
     var address: String? = null,
 
+    @Column(name = "logo_url")
+    var logoUrl: String? = null,
     // ============================
     // Soft Delete
     // ============================

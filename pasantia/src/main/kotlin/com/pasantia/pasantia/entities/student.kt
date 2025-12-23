@@ -33,6 +33,11 @@ data class Student(
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     var user: User,
 
+    // Student → Specialty
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "specialty_id", nullable = false)
+    var specialty: Specialty,
+
     @Column(nullable = false, length = 80)
     var firstName: String,
 

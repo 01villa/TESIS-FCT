@@ -13,14 +13,20 @@ class SchoolTutorController(
     private val service: SchoolTutorService
 ) {
 
-    /** CREATE */
+    // =========================
+    // CREATE
+    // POST /admin/school-tutors/{schoolId}
+    // =========================
     @PostMapping("/{schoolId}")
     fun create(
         @PathVariable schoolId: UUID,
         @RequestBody dto: CreateSchoolTutorDTO
     ) = ResponseEntity.ok(service.create(schoolId, dto))
 
-    /** LIST */
+    // =========================
+    // LIST
+    // GET /admin/school-tutors
+    // =========================
     @GetMapping
     fun list() = ResponseEntity.ok(service.list())
 
@@ -28,29 +34,41 @@ class SchoolTutorController(
     fun listBySchool(@PathVariable schoolId: UUID) =
         ResponseEntity.ok(service.listBySchool(schoolId))
 
-    /** GET ONE */
+    // =========================
+    // GET ONE
+    // GET /admin/school-tutors/{id}
+    // =========================
     @GetMapping("/{id}")
     fun get(@PathVariable id: UUID) =
         ResponseEntity.ok(service.get(id))
 
-    /** UPDATE */
+    // =========================
+    // UPDATE
+    // PUT /admin/school-tutors/{id}
+    // =========================
     @PutMapping("/{id}")
     fun update(
         @PathVariable id: UUID,
         @RequestBody dto: UpdateSchoolTutorDTO
     ) = ResponseEntity.ok(service.update(id, dto))
 
-    /** DELETE (soft) */
+    // =========================
+    // DELETE (SOFT DELETE REAL)
+    // DELETE /admin/school-tutors/{id}
+    // =========================
     @DeleteMapping("/{id}")
     fun delete(@PathVariable id: UUID): ResponseEntity<Void> {
-        service.softDelete(id)
+        service.delete(id)
         return ResponseEntity.noContent().build()
     }
 
-    /** RESTORE */
+    // =========================
+    // RESTORE
+    // PATCH /admin/school-tutors/{id}/restore
+    // =========================
     @PatchMapping("/{id}/restore")
-    fun restore(@PathVariable id: UUID) =
-        ResponseEntity.ok(service.restore(id))
-
-
+    fun restore(@PathVariable id: UUID): ResponseEntity<Void> {
+        service.restore(id)
+        return ResponseEntity.noContent().build()
+    }
 }

@@ -31,6 +31,7 @@ class SecurityConfig(
                 // PUBLIC
                 // -------------------------------------------------
                 it.requestMatchers("/auth/**").permitAll()
+                it.requestMatchers("/uploads/**").permitAll()
 
                 // ============================
                 // ADMIN GENERAL
@@ -138,6 +139,12 @@ class SecurityConfig(
                 // GET /users/basic
                 it.requestMatchers(HttpMethod.GET, "/users/basic")
                     .hasAnyRole("ADMIN", "SCHOOL_ADMIN", "SCHOOL_TUTOR", "COMPANY_ADMIN", "COMPANY_TUTOR")
+
+                it.requestMatchers(
+                    HttpMethod.PATCH,
+                    "/admin/users/**"
+                ).hasRole("ADMIN")
+
 
 
                 // ============================

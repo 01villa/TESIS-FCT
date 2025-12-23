@@ -5,13 +5,9 @@ import com.pasantia.pasantia.dto.company.companytutor.CompanyTutorDTO
 import com.pasantia.pasantia.dto.company.companytutor.CreateCompanyTutorDTO
 import com.pasantia.pasantia.dto.company.companytutor.UpdateCompanyTutorDTO
 import com.pasantia.pasantia.entities.CompanyTutor
-import com.pasantia.pasantia.entities.User
-import com.pasantia.pasantia.entities.UserRole
-import com.pasantia.pasantia.entities.UserRoleId
 import com.pasantia.pasantia.mappers.CompanyTutorMapper
 import com.pasantia.pasantia.repositories.*
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 import java.util.*
@@ -24,6 +20,9 @@ class CompanyTutorService(
     private val userRepository: UserRepository
 ) {
 
+    // ============================================================
+    // CREATE
+    // ============================================================
     @Transactional
     fun create(companyId: UUID, dto: CreateCompanyTutorDTO): CompanyTutorDTO {
 
@@ -50,9 +49,14 @@ class CompanyTutorService(
             deletedAt = null
         )
 
-        return CompanyTutorMapper.toDTO(companyTutorRepository.save(tutor))
+        companyTutorRepository.save(tutor)
+
+        return CompanyTutorMapper.toDTO(tutor)
     }
 
+    // ============================================================
+    // READ
+    // ============================================================
     fun list(): List<CompanyTutorDTO> =
         companyTutorRepository.findAllByActiveTrue()
             .map { CompanyTutorMapper.toDTO(it) }
@@ -68,6 +72,9 @@ class CompanyTutorService(
         return CompanyTutorMapper.toDTO(tutor)
     }
 
+    // ============================================================
+    // UPDATE
+    // ============================================================
     @Transactional
     fun update(id: UUID, dto: UpdateCompanyTutorDTO): CompanyTutorDTO {
         val tutor = companyTutorRepository.findByIdAndActiveTrue(id)
@@ -76,25 +83,36 @@ class CompanyTutorService(
         dto.phone?.let { tutor.phone = it }
         tutor.updatedAt = LocalDateTime.now()
 
-        companyTutorRepository.save(tutor)
         return CompanyTutorMapper.toDTO(tutor)
     }
 
-    fun softDelete(id: UUID) {
+    // ============================================================
+    // DELETE (CORRECTO)
+    // ============================================================
+    @Transactional
+    fun delete(id: UUID) {
         val tutor = companyTutorRepository.findByIdAndActiveTrue(id)
             ?: throw IllegalArgumentException("CompanyTutor not found or already inactive")
 
+        // 🔥 fuente de verdad
+        userService.softDeleteUser(tutor.user.id!!)
+
+        // estado informativo
         tutor.active = false
         tutor.deletedAt = LocalDateTime.now()
-        companyTutorRepository.save(tutor)
     }
 
+    // ============================================================
+    // RESTORE
+    // ============================================================
+    @Transactional
     fun restore(id: UUID) {
         val tutor = companyTutorRepository.findById(id)
             .orElseThrow { IllegalArgumentException("CompanyTutor not found") }
 
+        userService.restoreUser(tutor.user.id!!)
+
         tutor.active = true
         tutor.deletedAt = null
-        companyTutorRepository.save(tutor)
     }
 }

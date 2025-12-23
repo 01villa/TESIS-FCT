@@ -7,6 +7,8 @@ data class StudentDTO(
     val id: UUID,
     val schoolId: UUID,
     val userId: UUID,
+    val specialtyId: UUID,
+    val specialtyName: String,
     val fullName: String,
     val ci: String,
     val phone: String?,

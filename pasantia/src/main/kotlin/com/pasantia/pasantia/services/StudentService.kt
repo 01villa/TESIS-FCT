@@ -13,7 +13,7 @@ import jakarta.transaction.Transactional
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
-import java.util.*
+import java.util.UUID
 
 @Service
 class StudentService(
@@ -22,16 +22,17 @@ class StudentService(
     private val userRepository: UserRepository,
     private val roleRepository: RoleRepository,
     private val userRoleRepository: UserRoleRepository,
-    private val passwordEncoder: PasswordEncoder
+    private val specialtyRepository: SpecialtyRepository, // 👈 NUEVO
+    private val passwordEncoder: PasswordEncoder,
+    private val userService: UserService
 ) {
 
     // ============================================================
-    // CREATE STUDENT (User + Role + Student)
+    // CREATE
     // ============================================================
     @Transactional
     fun createStudent(schoolId: UUID, dto: CreateStudentDTO): StudentDTO {
 
-        // Validar duplicados
         if (userRepository.existsByEmail(dto.email))
             throw IllegalArgumentException("Email already registered")
 
@@ -41,7 +42,9 @@ class StudentService(
         val school = schoolRepository.findByIdAndActiveTrue(schoolId)
             ?: throw IllegalArgumentException("School not found or inactive")
 
-        // ===== Crear User asociado ===== //
+        val specialty = specialtyRepository.findById(dto.specialtyId)
+            .orElseThrow { IllegalArgumentException("Specialty not found") }
+
         val user = User(
             email = dto.email,
             fullName = "${dto.firstName} ${dto.lastName}",
@@ -50,24 +53,23 @@ class StudentService(
             deletedAt = null
         )
 
-        val savedUser = userRepository.save(user)
+        userRepository.save(user)
 
-        // ===== Asignar rol STUDENT ===== //
         val studentRole = roleRepository.findByName("STUDENT")
             ?: throw IllegalArgumentException("Role STUDENT not found")
 
         userRoleRepository.save(
             UserRole(
-                id = UserRoleId(savedUser.id!!, studentRole.id),
-                user = savedUser,
+                id = UserRoleId(user.id!!, studentRole.id),
+                user = user,
                 role = studentRole
             )
         )
 
-        // ===== Crear Student ===== //
         val student = Student(
             school = school,
-            user = savedUser,
+            user = user,
+            specialty = specialty, // 👈 CONEXIÓN REAL
             firstName = dto.firstName,
             lastName = dto.lastName,
             ci = dto.ci,
@@ -76,13 +78,13 @@ class StudentService(
             deletedAt = null
         )
 
-        val savedStudent = studentRepository.save(student)
+        studentRepository.save(student)
 
-        return StudentMapper.toDTO(savedStudent)
+        return StudentMapper.toDTO(student)
     }
 
     // ============================================================
-    // LIST STUDENTS (solo activos)
+    // READ
     // ============================================================
     fun listStudents(): List<StudentDTO> =
         studentRepository.findAllByActiveTrue()
@@ -92,9 +94,6 @@ class StudentService(
         studentRepository.findAllBySchoolIdAndActiveTrue(schoolId)
             .map { StudentMapper.toDTO(it) }
 
-    // ============================================================
-    // GET ONE
-    // ============================================================
     fun getStudent(id: UUID): StudentDTO {
         val student = studentRepository.findByIdAndActiveTrue(id)
             ?: throw IllegalArgumentException("Student not found or inactive")
@@ -118,13 +117,17 @@ class StudentService(
         }
         dto.phone?.let { student.phone = it }
 
+        // 👉 cambio de especialidad (si viene)
+        dto.specialtyId?.let {
+            val specialty = specialtyRepository.findById(it)
+                .orElseThrow { IllegalArgumentException("Specialty not found") }
+            student.specialty = specialty
+        }
+
         student.updatedAt = LocalDateTime.now()
 
-        studentRepository.save(student)
-
-        // Actualizar nombre en User también
+        // sincronizar nombre con User
         student.user.fullName = "${student.firstName} ${student.lastName}"
-        userRepository.save(student.user)
 
         return StudentMapper.toDTO(student)
     }
@@ -136,17 +139,18 @@ class StudentService(
     }
 
     // ============================================================
-    // SOFT DELETE
+    // DELETE (SOFT DELETE)
     // ============================================================
     @Transactional
-    fun softDelete(id: UUID) {
+    fun deleteStudent(id: UUID) {
         val student = studentRepository.findByIdAndActiveTrue(id)
             ?: throw IllegalArgumentException("Student not found or already inactive")
 
+        // fuente de verdad
+        userService.softDeleteUser(student.user.id!!)
+
         student.active = false
         student.deletedAt = LocalDateTime.now()
-
-        studentRepository.save(student)
     }
 
     // ============================================================
@@ -157,9 +161,9 @@ class StudentService(
         val student = studentRepository.findById(id)
             .orElseThrow { IllegalArgumentException("Student not found") }
 
+        userService.restoreUser(student.user.id!!)
+
         student.active = true
         student.deletedAt = null
-
-        studentRepository.save(student)
     }
 }

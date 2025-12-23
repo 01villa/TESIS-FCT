@@ -20,6 +20,7 @@ import {
   ModalFooter,
   ModalCloseButton,
   IconButton,
+  Avatar,
 } from "@chakra-ui/react";
 
 import { useEffect, useState } from "react";
@@ -27,6 +28,7 @@ import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 import { usersApi } from "../../api/users.api";
 import CreateAdminModal from "./CreateAdminModal";
 import EditAdminModal from "./EditAdminModal";
+import { API_URL } from "../../config/api";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -71,16 +73,17 @@ export default function UsersPage() {
     loadUsers();
   }, []);
 
-  // Diccionario: rol técnico -> etiqueta amigable
+  // etiquetas amigables de roles
   const roleLabels: Record<string, string> = {
     ADMIN: "Administrador General",
     COMPANY_ADMIN: "Administrador de Empresa",
     SCHOOL_ADMIN: "Administrador de Colegio",
+    SCHOOL_TUTOR: "Tuto Escolar",
+    COMPANY_TUTOR: "Tutor de Empresa",
+    STUDENT: "Estudiante",
   };
 
-  // ----------------------------
-  // FILTROS
-  // ----------------------------
+  // ================= FILTROS =================
   useEffect(() => {
     let result = [...users];
 
@@ -98,9 +101,7 @@ export default function UsersPage() {
     setFiltered(result);
   }, [search, roleFilter, users]);
 
-  // ----------------------------
-  // ORDENAMIENTO
-  // ----------------------------
+  // ================= ORDEN =================
   const applySort = (data: any[], config: typeof sortConfig) => {
     if (!config) return data;
 
@@ -116,7 +117,6 @@ export default function UsersPage() {
     });
   };
 
-  // recalcular sorted cuando cambian filtros o config de orden
   useEffect(() => {
     setSorted(applySort(filtered, sortConfig));
   }, [filtered, sortConfig]);
@@ -124,7 +124,7 @@ export default function UsersPage() {
   const handleSort = (key: string) => {
     let direction: "asc" | "desc" = "asc";
 
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+    if (sortConfig?.key === key && sortConfig.direction === "asc") {
       direction = "desc";
     }
 
@@ -136,14 +136,13 @@ export default function UsersPage() {
     return sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />;
   };
 
-  // roles disponibles para el Select (pero con label amigable)
   const availableRoles = Array.from(
     new Set(users.flatMap((u) => u.roles ?? []))
   );
 
   return (
     <Box>
-      {/* --- HEADER + INSTRUCCIONES --- */}
+      {/* HEADER */}
       <Flex justify="space-between" align="center" mb={6}>
         <Heading size="lg">Usuarios Administradores</Heading>
 
@@ -152,7 +151,7 @@ export default function UsersPage() {
         </Button>
       </Flex>
 
-      {/* --- FILTROS --- */}
+      {/* FILTROS */}
       <Flex gap={4} mb={6} wrap="wrap">
         <Input
           placeholder="Buscar por nombre o email..."
@@ -165,7 +164,7 @@ export default function UsersPage() {
           placeholder="Rol"
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
-          maxW="240px"
+          maxW="260px"
         >
           {availableRoles.map((r) => (
             <option key={r} value={r}>
@@ -179,7 +178,7 @@ export default function UsersPage() {
         </Button>
       </Flex>
 
-      {/* --- TABLA --- */}
+      {/* TABLA */}
       <Table variant="simple" bg="white" rounded="md" shadow="sm">
         <Thead bg="gray.100">
           <Tr>
@@ -187,7 +186,7 @@ export default function UsersPage() {
               <Flex align="center" gap={2}>
                 NOMBRE
                 <IconButton
-                  aria-label="Ordenar por nombre"
+                  aria-label="Ordenar nombre"
                   size="xs"
                   variant="ghost"
                   icon={getSortIcon("fullName")}
@@ -200,7 +199,7 @@ export default function UsersPage() {
               <Flex align="center" gap={2}>
                 EMAIL
                 <IconButton
-                  aria-label="Ordenar por email"
+                  aria-label="Ordenar email"
                   size="xs"
                   variant="ghost"
                   icon={getSortIcon("email")}
@@ -217,10 +216,27 @@ export default function UsersPage() {
         <Tbody>
           {sorted.map((u) => (
             <Tr key={u.id}>
-              <Td fontWeight="500">{u.fullName}</Td>
-              <Td>{u.email}</Td>
-              <Td>{u.roles?.map((r: string) => roleLabels[r] ?? r).join(", ")}</Td>
+              {/* NOMBRE + AVATAR */}
+              <Td>
+                <Flex align="center" gap={3}>
+                  <Avatar
+                    size="sm"
+                    name={u.fullName}
+                    src={u.photoUrl ? `${API_URL}${u.photoUrl}` : undefined}
+                  />
+                  <Box fontWeight="500">{u.fullName}</Box>
+                </Flex>
+              </Td>
 
+              {/* EMAIL */}
+              <Td>{u.email}</Td>
+
+              {/* ROL */}
+              <Td>
+                {u.roles?.map((r: string) => roleLabels[r] ?? r).join(", ")}
+              </Td>
+
+              {/* ACCIONES */}
               <Td>
                 <Flex justify="center" gap={3}>
                   <Button
@@ -251,7 +267,7 @@ export default function UsersPage() {
         </Tbody>
       </Table>
 
-      {/* --- MODALES --- */}
+      {/* MODALES */}
       <CreateAdminModal
         isOpen={isOpenCreate}
         onClose={() => {
@@ -272,7 +288,7 @@ export default function UsersPage() {
         />
       )}
 
-      {/* --- MODAL INSTRUCCIONES --- */}
+      {/* MODAL INSTRUCCIONES */}
       <InstructionsModal
         isOpen={isOpenInstructions}
         onClose={onCloseInstructions}
@@ -281,9 +297,7 @@ export default function UsersPage() {
   );
 }
 
-// ==============================================================
-// MODAL DE INSTRUCCIONES
-// ==============================================================
+// ================= MODAL INSTRUCCIONES =================
 
 function InstructionsModal({ isOpen, onClose }: any) {
   return (
@@ -294,15 +308,15 @@ function InstructionsModal({ isOpen, onClose }: any) {
         <ModalCloseButton />
         <ModalBody fontSize="md" color="gray.600">
           En este módulo se gestionan exclusivamente los{" "}
-          <strong>usuarios administradores del sistema</strong>.  
-          Aquí puedes crear, editar y eliminar administradores,
-          modificando nombre, correo electrónico y contraseña.
+          <strong>usuarios administradores del sistema</strong>.
           <br />
           <br />
-          Este módulo no crea usuarios con roles específicos
-          (estudiantes, tutores escolares o tutores de empresa).
-          Esos perfiles se gestionan desde los módulos de escuelas,
-          empresas o asignaciones, según corresponda.
+          Puedes crear, editar y eliminar administradores, así como actualizar
+          su información personal y credenciales.
+          <br />
+          <br />
+          Los usuarios operativos (estudiantes y tutores) se gestionan desde los
+          módulos de escuelas y empresas.
         </ModalBody>
 
         <ModalFooter>

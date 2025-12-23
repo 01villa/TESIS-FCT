@@ -8,6 +8,7 @@ import com.pasantia.pasantia.services.CompanyAdminService
 import com.pasantia.pasantia.services.CompanyService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.multipart.MultipartFile
 import java.util.*
 
 @RestController
@@ -70,5 +71,20 @@ class CompanyController(
         val result = companyAdminService.createCompanyAdmin(id, dto)
         return ResponseEntity.ok(result)
     }
+
+    @PatchMapping("/{id}/logo")
+    fun uploadCompanyLogo(
+        @PathVariable id: UUID,
+        @RequestParam("file") file: MultipartFile
+    ): ResponseEntity<Void> {
+        companyService.updateLogo(id, file)
+        return ResponseEntity.noContent().build()
+    }
+
+    @PatchMapping("/{id}/logo/remove")
+    fun removeLogo(@PathVariable id: UUID) {
+        companyService.removeLogo(id)
+    }
+
 
 }

@@ -11,6 +11,7 @@ object CompanyMapper {
         active = company.active,
         deletedAt = company.deletedAt,
         createdAt = company.createdAt,
-        updatedAt = company.updatedAt
+        updatedAt = company.updatedAt,
+        photoUrl = company.logoUrl
     )
 }

@@ -5,8 +5,6 @@ import com.pasantia.pasantia.dto.school.schoolTutor.CreateSchoolTutorDTO
 import com.pasantia.pasantia.dto.school.schoolTutor.SchoolTutorDTO
 import com.pasantia.pasantia.dto.school.schoolTutor.UpdateSchoolTutorDTO
 import com.pasantia.pasantia.entities.SchoolTutor
-import com.pasantia.pasantia.entities.UserRole
-import com.pasantia.pasantia.entities.UserRoleId
 import com.pasantia.pasantia.mappers.SchoolTutorMapper
 import com.pasantia.pasantia.repositories.*
 import org.springframework.stereotype.Service
@@ -19,21 +17,18 @@ class SchoolTutorService(
     private val schoolTutorRepository: SchoolTutorRepository,
     private val schoolRepository: SchoolRepository,
     private val userService: UserService,
-    private val userRepository: UserRepository,
-    private val roleRepository: RoleRepository,
-    private val userRoleRepository: UserRoleRepository
+    private val userRepository: UserRepository
 ) {
 
-    /** =============================================
-     * CREATE TUTOR (User + Role + SchoolTutor)
-     * ============================================= */
+    // ============================================================
+    // CREATE
+    // ============================================================
     @Transactional
     fun create(schoolId: UUID, dto: CreateSchoolTutorDTO): SchoolTutorDTO {
 
         val school = schoolRepository.findByIdAndActiveTrue(schoolId)
             ?: throw IllegalArgumentException("School not found or inactive")
 
-        // Crear user con rol SCHOOL_TUTOR
         val userDTO = userService.createUser(
             CreateUserDTO(
                 email = dto.email,
@@ -54,12 +49,14 @@ class SchoolTutorService(
             deletedAt = null
         )
 
-        return SchoolTutorMapper.toDTO(schoolTutorRepository.save(tutor))
+        schoolTutorRepository.save(tutor)
+
+        return SchoolTutorMapper.toDTO(tutor)
     }
 
-    /** =============================================
-     * LIST
-     * ============================================= */
+    // ============================================================
+    // READ
+    // ============================================================
     fun list(): List<SchoolTutorDTO> =
         schoolTutorRepository.findAllByActiveTrue()
             .map { SchoolTutorMapper.toDTO(it) }
@@ -68,9 +65,6 @@ class SchoolTutorService(
         schoolTutorRepository.findAllBySchoolIdAndActiveTrue(schoolId)
             .map { SchoolTutorMapper.toDTO(it) }
 
-    /** =============================================
-     * GET
-     * ============================================= */
     fun get(id: UUID): SchoolTutorDTO {
         val tutor = schoolTutorRepository.findByIdAndActiveTrue(id)
             ?: throw IllegalArgumentException("SchoolTutor not found or inactive")
@@ -78,46 +72,47 @@ class SchoolTutorService(
         return SchoolTutorMapper.toDTO(tutor)
     }
 
-    /** =============================================
-     * UPDATE (solo datos propios del tutor)
-     * ============================================= */
+    // ============================================================
+    // UPDATE
+    // ============================================================
     @Transactional
     fun update(id: UUID, dto: UpdateSchoolTutorDTO): SchoolTutorDTO {
         val tutor = schoolTutorRepository.findByIdAndActiveTrue(id)
             ?: throw IllegalArgumentException("SchoolTutor not found or inactive")
 
         dto.phone?.let { tutor.phone = it }
-
         tutor.updatedAt = LocalDateTime.now()
-
-        schoolTutorRepository.save(tutor)
 
         return SchoolTutorMapper.toDTO(tutor)
     }
 
-    /** =============================================
-     * SOFT DELETE
-     * ============================================= */
-    fun softDelete(id: UUID) {
+    // ============================================================
+    // DELETE (CORRECTO)
+    // ============================================================
+    @Transactional
+    fun delete(id: UUID) {
         val tutor = schoolTutorRepository.findByIdAndActiveTrue(id)
             ?: throw IllegalArgumentException("SchoolTutor not found or already inactive")
 
+        // 🔥 fuente de verdad
+        userService.softDeleteUser(tutor.user.id!!)
+
+        // estado informativo
         tutor.active = false
         tutor.deletedAt = LocalDateTime.now()
-
-        schoolTutorRepository.save(tutor)
     }
 
-    /** =============================================
-     * RESTORE
-     * ============================================= */
+    // ============================================================
+    // RESTORE
+    // ============================================================
+    @Transactional
     fun restore(id: UUID) {
         val tutor = schoolTutorRepository.findById(id)
             .orElseThrow { IllegalArgumentException("SchoolTutor not found") }
 
+        userService.restoreUser(tutor.user.id!!)
+
         tutor.active = true
         tutor.deletedAt = null
-
-        schoolTutorRepository.save(tutor)
     }
 }

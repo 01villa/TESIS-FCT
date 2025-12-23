@@ -7,16 +7,18 @@ import com.pasantia.pasantia.entities.Company
 import com.pasantia.pasantia.entities.Vacancy
 import com.pasantia.pasantia.mappers.VacancyMapper
 import com.pasantia.pasantia.repositories.CompanyRepository
+import com.pasantia.pasantia.repositories.SpecialtyRepository
 import com.pasantia.pasantia.repositories.VacancyRepository
 import jakarta.transaction.Transactional
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
-import java.util.*
+import java.util.UUID
 
 @Service
 class VacancyService(
     private val vacancyRepository: VacancyRepository,
-    private val companyRepository: CompanyRepository
+    private val companyRepository: CompanyRepository,
+    private val specialtyRepository: SpecialtyRepository // 👈 NUEVO
 ) {
 
     // ======================================================
@@ -28,11 +30,15 @@ class VacancyService(
         val company: Company = companyRepository.findByIdAndActiveTrue(companyId)
             ?: throw IllegalArgumentException("Company not found or inactive")
 
+        val specialty = specialtyRepository.findById(dto.specialtyId)
+            .orElseThrow { IllegalArgumentException("Specialty not found") }
+
         validateDates(dto.startDate, dto.endDate)
         validateCapacity(dto.capacity)
 
         val vacancy = Vacancy(
             company = company,
+            specialty = specialty, // 👈 CLAVE
             title = dto.title,
             description = dto.description,
             requirements = dto.requirements,
@@ -85,6 +91,12 @@ class VacancyService(
             v.capacity = it
         }
 
+        dto.specialtyId?.let {
+            val specialty = specialtyRepository.findById(it)
+                .orElseThrow { IllegalArgumentException("Specialty not found") }
+            v.specialty = specialty
+        }
+
         if (dto.startDate != null && dto.endDate != null) {
             validateDates(dto.startDate, dto.endDate)
             v.startDate = dto.startDate
@@ -104,9 +116,7 @@ class VacancyService(
 
         v.updatedAt = LocalDateTime.now()
 
-        vacancyRepository.save(v)
-
-        return VacancyMapper.toDTO(v)
+        return VacancyMapper.toDTO(vacancyRepository.save(v))
     }
 
     // ======================================================
@@ -116,7 +126,7 @@ class VacancyService(
         val v = vacancyRepository.findByIdAndActiveTrue(id)
             ?: throw IllegalArgumentException("Vacancy not found")
 
-        v.status = 2.toShort() // cerrada
+        v.status = 2.toShort()
         v.updatedAt = LocalDateTime.now()
 
         return VacancyMapper.toDTO(vacancyRepository.save(v))
@@ -126,14 +136,14 @@ class VacancyService(
         val v = vacancyRepository.findByIdAndActiveTrue(id)
             ?: throw IllegalArgumentException("Vacancy not found")
 
-        v.status = 1.toShort() // abierta
+        v.status = 1.toShort()
         v.updatedAt = LocalDateTime.now()
 
         return VacancyMapper.toDTO(vacancyRepository.save(v))
     }
 
     // ======================================================
-    // SOFT DELETE
+    // SOFT DELETE / RESTORE
     // ======================================================
     fun softDelete(id: UUID) {
         val v = vacancyRepository.findByIdAndActiveTrue(id)
@@ -141,22 +151,25 @@ class VacancyService(
 
         v.active = false
         v.deletedAt = LocalDateTime.now()
-
         vacancyRepository.save(v)
     }
 
-    // ======================================================
-    // RESTORE
-    // ======================================================
     fun restore(id: UUID) {
         val v = vacancyRepository.findById(id)
             .orElseThrow { IllegalArgumentException("Vacancy not found") }
 
         v.active = true
         v.deletedAt = null
-
         vacancyRepository.save(v)
     }
+
+    // ======================================================
+    // LIST AVAILABLE
+    // ======================================================
+    fun listAvailableForStudents(): List<VacancyDTO> =
+        vacancyRepository.findAllByActiveTrue()
+            .filter { it.status == 1.toShort() && it.capacity > 0 }
+            .map { VacancyMapper.toDTO(it) }
 
     // ======================================================
     // VALIDATIONS
@@ -170,10 +183,4 @@ class VacancyService(
         if (capacity <= 0)
             throw IllegalArgumentException("Capacity must be greater than 0")
     }
-
-    fun listAvailableForStudents(): List<VacancyDTO> =
-        vacancyRepository.findAllByActiveTrue()
-            .filter { it.status == 1.toShort() } // abiertas
-            .map { VacancyMapper.toDTO(it) }
-
 }

@@ -1,23 +1,32 @@
 import axios from "axios";
 
 export const usersApi = {
-  // Obtener admins del sistema
+  // =========================
+  // LIST
+  // =========================
   list: async () => {
     const res = await axios.get("/admin/users");
     return res.data;
   },
 
-  // Crear admin (forzado a rol ADMIN)
-  create: async (dto: { fullName: string; email: string; password: string }) => {
+  // =========================
+  // CREATE
+  // =========================
+  create: async (dto: {
+    fullName: string;
+    email: string;
+    password: string;
+  }) => {
     const res = await axios.post("/admin/users", {
       ...dto,
-      roles: ["ADMIN"], // 🔥 obligatorio en tu backend
+      roles: ["ADMIN"],
     });
-
     return res.data;
   },
 
-  // Editar admin
+  // =========================
+  // UPDATE DATA
+  // =========================
   update: async (
     id: string,
     dto: {
@@ -28,14 +37,42 @@ export const usersApi = {
   ) => {
     const res = await axios.put(`/admin/users/${id}`, {
       ...dto,
-      roles: ["ADMIN"], // 🔥 mantenemos el rol, el backend lo exige
+      roles: ["ADMIN"],
     });
+    return res.data;
+  },
+
+  // =========================
+  // DELETE USER (soft delete)
+  // =========================
+  delete: async (id: string) => {
+    await axios.delete(`/admin/users/${id}`);
+  },
+
+  // =========================
+  // UPLOAD PHOTO
+  // =========================
+  uploadPhoto: async (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await axios.patch(
+      `/admin/users/${id}/photo`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
 
     return res.data;
   },
 
-  // Eliminar admin
-  delete: async (id: string) => {
-    await axios.delete(`/admin/users/${id}`);
+  // =========================
+  // REMOVE PHOTO
+  // =========================
+  removePhoto: async (id: string) => {
+    await axios.patch(`/admin/users/${id}/photo/remove`);
   },
 };

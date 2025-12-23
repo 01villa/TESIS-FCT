@@ -6,4 +6,5 @@ export interface School {
   deletedAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  photoUrl?: string | null;
 }

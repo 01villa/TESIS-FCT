@@ -14,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 import java.util.*
 
-
 @Service
 class CompanyAdminService(
     private val companyAdminRepository: CompanyAdminRepository,
@@ -22,9 +21,13 @@ class CompanyAdminService(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder,
     private val roleRepository: RoleRepository,
-    private val userRoleRepository: UserRoleRepository
+    private val userRoleRepository: UserRoleRepository,
+    private val userService: UserService
 ) {
 
+    // ============================================================
+    // READ
+    // ============================================================
     fun list(): List<CompanyAdminDTO> =
         companyAdminRepository.findAllByActiveTrue()
             .map { CompanyAdminMapper.toDTO(it) }
@@ -40,24 +43,9 @@ class CompanyAdminService(
         return CompanyAdminMapper.toDTO(admin)
     }
 
-    fun softDelete(id: UUID) {
-        val admin = companyAdminRepository.findByIdAndActiveTrue(id)
-            ?: throw IllegalArgumentException("CompanyAdmin not found or already inactive")
-
-        admin.active = false
-        admin.deletedAt = LocalDateTime.now()
-        companyAdminRepository.save(admin)
-    }
-
-    fun restore(id: UUID) {
-        val admin = companyAdminRepository.findById(id)
-            .orElseThrow { IllegalArgumentException("CompanyAdmin not found") }
-
-        admin.active = true
-        admin.deletedAt = null
-        companyAdminRepository.save(admin)
-    }
-
+    // ============================================================
+    // CREATE
+    // ============================================================
     @Transactional
     fun createCompanyAdmin(companyId: UUID, dto: CreateAdminForEntityDTO): CompanyAdminDTO {
 
@@ -73,24 +61,58 @@ class CompanyAdminService(
             passwordHash = passwordEncoder.encode(dto.password),
             active = true
         )
-        val savedUser = userRepository.save(user)
+        userRepository.save(user)
 
         val role = roleRepository.findByName("COMPANY_ADMIN")
             ?: throw IllegalArgumentException("Role COMPANY_ADMIN not found")
 
-        // ✔ Tu estructura exacta con UserRoleId
-        val userRoleId = UserRoleId(savedUser.id!!, role.id!!)
-        val userRole = UserRole(userRoleId, savedUser, role)
-        userRoleRepository.save(userRole)
-
-        val companyAdmin = CompanyAdmin(
-            user = savedUser,
-            company = company,
-            active = true
+        userRoleRepository.save(
+            UserRole(
+                id = UserRoleId(user.id!!, role.id!!),
+                user = user,
+                role = role
+            )
         )
 
-        val savedAdmin = companyAdminRepository.save(companyAdmin)
+        val companyAdmin = CompanyAdmin(
+            user = user,
+            company = company,
+            active = true,
+            deletedAt = null
+        )
 
-        return CompanyAdminMapper.toDTO(savedAdmin)
+        companyAdminRepository.save(companyAdmin)
+
+        return CompanyAdminMapper.toDTO(companyAdmin)
+    }
+
+    // ============================================================
+    // DELETE (CORRECTO)
+    // ============================================================
+    @Transactional
+    fun delete(id: UUID) {
+        val admin = companyAdminRepository.findByIdAndActiveTrue(id)
+            ?: throw IllegalArgumentException("CompanyAdmin not found or already inactive")
+
+        // 🔥 fuente de verdad
+        userService.softDeleteUser(admin.user.id!!)
+
+        // estado informativo
+        admin.active = false
+        admin.deletedAt = LocalDateTime.now()
+    }
+
+    // ============================================================
+    // RESTORE
+    // ============================================================
+    @Transactional
+    fun restore(id: UUID) {
+        val admin = companyAdminRepository.findById(id)
+            .orElseThrow { IllegalArgumentException("CompanyAdmin not found") }
+
+        userService.restoreUser(admin.user.id!!)
+
+        admin.active = true
+        admin.deletedAt = null
     }
 }

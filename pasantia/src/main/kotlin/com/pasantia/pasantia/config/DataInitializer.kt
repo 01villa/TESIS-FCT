@@ -1,17 +1,11 @@
 package com.pasantia.pasantia.config
 
-import com.pasantia.pasantia.entities.Role
-import com.pasantia.pasantia.entities.User
-import com.pasantia.pasantia.entities.UserRole
-import com.pasantia.pasantia.entities.UserRoleId
-import com.pasantia.pasantia.repositories.RoleRepository
-import com.pasantia.pasantia.repositories.UserRepository
-import com.pasantia.pasantia.repositories.UserRoleRepository
+import com.pasantia.pasantia.entities.*
+import com.pasantia.pasantia.repositories.*
 import org.springframework.boot.CommandLineRunner
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.crypto.password.PasswordEncoder
-import java.util.*
 
 @Configuration
 class DataInitializer {
@@ -21,6 +15,7 @@ class DataInitializer {
         roleRepository: RoleRepository,
         userRepository: UserRepository,
         userRoleRepository: UserRoleRepository,
+        specialtyRepository: SpecialtyRepository,
         passwordEncoder: PasswordEncoder
     ) = CommandLineRunner {
 
@@ -44,11 +39,40 @@ class DataInitializer {
         }
 
         // =============================
-        // 2. CREAR SUPER ADMIN
+        // 2. CREAR ESPECIALIDADES
+        // =============================
+        val specialties = listOf(
+            "Desarrollo de Software",
+            "Informática",
+            "Electrónica",
+            "Electricidad",
+            "Contabilidad",
+            "Administración",
+            "Mecánica Automotriz",
+            "Mecánica Industrial",
+            "Gastronomía",
+            "Turismo"
+        )
+
+        specialties.forEach { name ->
+            if (specialtyRepository.findByNameIgnoreCase(name) == null) {
+                specialtyRepository.save(
+                    Specialty(
+                        name = name,
+                        description = "Especialidad técnica"
+                    )
+                )
+                println("🎓 Especialidad creada: $name")
+            }
+        }
+
+        // =============================
+        // 3. CREAR SUPER ADMIN
         // =============================
         val adminEmail = "admin@fctcuenca.edu.ec"
 
         if (userRepository.findByEmail(adminEmail) == null) {
+
             val admin = User(
                 email = adminEmail,
                 fullName = "Super Administrador",

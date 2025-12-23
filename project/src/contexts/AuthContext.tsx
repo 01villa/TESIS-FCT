@@ -65,14 +65,14 @@ export const AuthProvider = ({ children }: { children: any }) => {
         ? data.user.roles[0]
         : decoded.roles?.[0] ?? null;
 
-    const userFinal: any = {
-      id: data.user?.id,
-      fullName: data.user?.fullName,
-      role: firstRole,
-    };
+const userFinal = {
+  ...data.user,        // 👈 NO pierdes nada (photoUrl incluida)
+  role: firstRole,     // 👈 mantienes compatibilidad con tu app
+};
 
-    if (decoded.schoolId) userFinal.schoolId = decoded.schoolId;
-    if (decoded.companyId) userFinal.companyId = decoded.companyId;
+if (decoded.schoolId) userFinal.schoolId = decoded.schoolId;
+if (decoded.companyId) userFinal.companyId = decoded.companyId;
+
 
     setToken(data.token);
     setUser(userFinal);

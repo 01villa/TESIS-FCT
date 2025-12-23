@@ -10,5 +10,7 @@ data class SchoolDTO(
     val active: Boolean,
     val deletedAt: LocalDateTime?,
     val createdAt: LocalDateTime?,
-    val updatedAt: LocalDateTime?
+    val updatedAt: LocalDateTime?,
+    val photoUrl: String?
+
 )

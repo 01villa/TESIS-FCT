@@ -11,5 +11,6 @@ data class UserDTO(
     val deletedAt: LocalDateTime?,
     val roles: List<String>,
     val createdAt: LocalDateTime?,
-    val updatedAt: LocalDateTime?
+    val updatedAt: LocalDateTime?,
+    val photoUrl: String?
 )

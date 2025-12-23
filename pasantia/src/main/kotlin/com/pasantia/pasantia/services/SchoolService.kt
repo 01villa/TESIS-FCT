@@ -8,12 +8,15 @@ import com.pasantia.pasantia.mappers.SchoolMapper
 import com.pasantia.pasantia.repositories.SchoolRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.multipart.MultipartFile
 import java.time.LocalDateTime
 import java.util.*
 
 @Service
 class SchoolService(
-    private val schoolRepository: SchoolRepository
+    private val schoolRepository: SchoolRepository,
+    private val fileStorageService: FileStorageService
+
 ) {
 
     /** ============================
@@ -91,5 +94,30 @@ class SchoolService(
         schoolRepository.save(school)
     }
 
+    @Transactional
+    fun updateLogo(schoolId: UUID, file: MultipartFile) {
+        val school = schoolRepository.findByIdAndActiveTrue(schoolId)
+            ?: throw IllegalArgumentException("School not found or inactive")
+
+        val contentType = file.contentType ?: ""
+        if (!contentType.startsWith("image/")) {
+            throw IllegalArgumentException("Only image files are allowed")
+        }
+
+        val url = fileStorageService.store(file, "schools")
+        school.logoUrl = url
+    }
+
+
+    @Transactional
+    fun removeLogo(schoolId: UUID) {
+        val school = schoolRepository.findByIdAndActiveTrue(schoolId)
+            ?: throw IllegalArgumentException("School not found or inactive")
+
+        school.logoUrl = null
+        school.updatedAt = LocalDateTime.now()
+
+        schoolRepository.save(school)
+    }
 
 }

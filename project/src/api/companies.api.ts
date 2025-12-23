@@ -35,4 +35,19 @@ export const companiesApi = {
     const res = await axios.patch(`/admin/companies/${id}/restore`);
     return res.data;
   },
+
+    uploadLogo: async (companyId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    await axios.patch(
+      `/admin/companies/${companyId}/logo`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+  },
+
+  removeLogo: async (companyId: string) => {
+    await axios.patch(`/admin/companies/${companyId}/logo/remove`);
+  },
 };

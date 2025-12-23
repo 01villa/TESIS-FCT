@@ -22,4 +22,11 @@ interface VacancyRepository : JpaRepository<Vacancy, UUID> {
 
     // Listado completo por empresa (incluye cerradas)
     fun findAllByCompanyId(companyId: UUID): List<Vacancy>
+    fun findAllBySpecialtyIdAndActiveTrue(specialtyId: UUID): List<Vacancy>
+    fun findAllBySpecialtyIdAndActiveTrueAndStatusAndCapacityGreaterThan(
+        specialtyId: UUID,
+        status: Short,
+        capacity: Int
+    ): List<Vacancy>
+
 }

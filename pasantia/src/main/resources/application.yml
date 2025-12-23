@@ -1,6 +1,10 @@
 jwt:
   secret: "k2VhH4s5qA1JHf8g0de/Nu1llotqDq5Ldf7K4EKrm0kA9p5lB4r8XZNtD5J9M0xyXkXnO5uXyQg="
   expiration: 86400000
+
+app:
+  upload-dir: uploads
+
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5433/pasantias

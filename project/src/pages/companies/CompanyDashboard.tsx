@@ -4,16 +4,12 @@ import {
   Heading,
   Spinner,
   Center,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
   Badge,
   Flex,
   Input,
   Select,
+  SimpleGrid,
+  Text,
   useDisclosure,
 } from "@chakra-ui/react";
 
@@ -22,6 +18,7 @@ import { companiesApi } from "../../api/companies.api";
 import CreateCompanyModal from "./CreateCompanyModal";
 import EditCompanyModal from "./EditCompanyModal";
 import { Link } from "react-router-dom";
+import { API_URL } from "../../config/api";
 
 export default function CompanyDashboard() {
   const [companies, setCompanies] = useState<any[]>([]);
@@ -46,12 +43,13 @@ export default function CompanyDashboard() {
     load();
   }, []);
 
-  if (loading)
+  if (loading) {
     return (
       <Center mt={20}>
         <Spinner size="xl" />
       </Center>
     );
+  }
 
   // ──────────── APLICAR FILTROS ─────────────
   const filtered = companies.filter((c) => {
@@ -69,6 +67,7 @@ export default function CompanyDashboard() {
         : !!c.deletedAt;
 
     return matchesSearch && matchesStatus;
+    
   });
 
   return (
@@ -83,7 +82,7 @@ export default function CompanyDashboard() {
       </Flex>
 
       {/* FILTROS */}
-      <Flex mb={4} gap={4} flexWrap="wrap">
+      <Flex mb={6} gap={4} flexWrap="wrap">
         <Input
           placeholder="Buscar empresa..."
           value={search}
@@ -102,85 +101,117 @@ export default function CompanyDashboard() {
         </Select>
       </Flex>
 
-      {/* TABLE */}
-      <Table variant="simple">
-        <Thead>
-          <Tr>
-            <Th>Nombre</Th>
-            <Th>Dirección</Th>
-            <Th>Estado</Th>
-            <Th textAlign="center">Acciones</Th>
-          </Tr>
-        </Thead>
+      {/* CARDS */}
+      <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={6}>
+        {filtered.map((c) => (
+          <Box
+            key={c.id}
+            p={6}
+            rounded="lg"
+            bg="white"
+            shadow="md"
+            borderWidth="1px"
+          >
+            {/* LOGO + INFO */}
+            <Flex align="center" gap={4} mb={4}>
+              <Box
+  w="100px"
+  h="60px"
+  bg="gray.50"
+  border="1px solid"
+  borderColor="gray.200"
+  rounded="md"
+  display="flex"
+  alignItems="center"
+  justifyContent="center"
+  overflow="hidden"
+>
+  {c.photoUrl ? (
+    <Box
+      as="img"
+      src={`${API_URL}${c.photoUrl}`}
+      alt={c.name}
+      maxW="100%"
+      maxH="100%"
+      objectFit="contain"
+    />
+  ) : (
+    <Text fontSize="xl" fontWeight="bold" color="gray.400">
+      {c.name.charAt(0)}
+    </Text>
+  )}
+</Box>
 
-        <Tbody>
-          {filtered.map((c) => (
-            <Tr key={c.id}>
-              <Td>{c.name}</Td>
-              <Td>{c.address}</Td>
+              <Box>
+                <Heading size="md">{c.name}</Heading>
+                <Text fontSize="sm" color="gray.500">
+                  {c.address || "Sin dirección registrada"}
+                </Text>
+              </Box>
+            </Flex>
 
-              <Td>
-                {c.deletedAt ? (
-                  <Badge colorScheme="red">Inactiva</Badge>
-                ) : (
-                  <Badge colorScheme="green">Activa</Badge>
-                )}
-              </Td>
+            {/* ESTADO */}
+            <Flex justify="center" mb={5}>
+              <Badge
+                px={3}
+                py={1}
+                rounded="full"
+                fontSize="0.8rem"
+                colorScheme={c.deletedAt ? "red" : "green"}
+              >
+                {c.deletedAt ? "INACTIVA" : "ACTIVA"}
+              </Badge>
+            </Flex>
 
-              <Td>
-                <Flex gap={3} justify="center">
-                  {/* DETALLE */}
-                  <Button
-                    as={Link}
-                    to={`/dashboard/companies/${c.id}`}
-                    size="sm"
-                    colorScheme="blue"
-                  >
-                    Abrir
-                  </Button>
+            {/* ACCIONES */}
+            <Flex gap={2} justify="flex-end" flexWrap="wrap">
+              <Button
+                as={Link}
+                to={`/dashboard/companies/${c.id}`}
+                size="sm"
+                colorScheme="blue"
+              >
+                Abrir
+              </Button>
 
-                  {/* EDITAR */}
-                  <Button
-                    size="sm"
-                    colorScheme="yellow"
-                    onClick={() => {
-                      setSelectedCompany(c);
-                      editModal.onOpen();
-                    }}
-                  >
-                    Editar
-                  </Button>
+              <Button
+                size="sm"
+                colorScheme="yellow"
+                onClick={() => {
+                  setSelectedCompany(c);
+                  editModal.onOpen();
+                }}
+              >
+                Editar
+              </Button>
 
-                  {/* DELETE / RESTORE */}
-                  {!c.deletedAt ? (
-                    <Button
-                      size="sm"
-                      colorScheme="red"
-                      onClick={async () => {
-                        await companiesApi.delete(c.id);
-                        load();
-                      }}
-                    >
-                      Eliminar
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      colorScheme="green"
-                      onClick={async () => {
-                        await companiesApi.restore(c.id);
-                        load();
-                      }}
-                    >
-                      Restaurar
-                    </Button>
-                  )}
-                </Flex>
-              </Td>
-            </Tr>
-          ))}
-        </Tbody>
-      </Table>
+              {!c.deletedAt ? (
+                <Button
+                  size="sm"
+                  colorScheme="red"
+                  onClick={async () => {
+                    await companiesApi.delete(c.id);
+                    load();
+                  }}
+                >
+                  Eliminar
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  colorScheme="green"
+                  onClick={async () => {
+                    await companiesApi.restore(c.id);
+                    load();
+                  }}
+                >
+                  Restaurar
+                </Button>
+              )}
+            </Flex>
+          </Box>
+        ))}
+      </SimpleGrid>
 
       {/* MODALES */}
       <CreateCompanyModal
@@ -189,12 +220,14 @@ export default function CompanyDashboard() {
         onCreated={load}
       />
 
-      <EditCompanyModal
-        isOpen={editModal.isOpen}
-        onClose={editModal.onClose}
-        company={selectedCompany}
-        onUpdated={load}
-      />
+      {selectedCompany && (
+        <EditCompanyModal
+          isOpen={editModal.isOpen}
+          onClose={editModal.onClose}
+          company={selectedCompany}
+          onUpdated={load}
+        />
+      )}
     </Box>
   );
 }

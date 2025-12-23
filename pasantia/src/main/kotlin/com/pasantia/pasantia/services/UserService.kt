@@ -15,15 +15,23 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 import java.util.*
+import org.springframework.web.multipart.MultipartFile
+
 
 @Service
 class UserService(
     private val userRepository: UserRepository,
     private val roleRepository: RoleRepository,
     private val userRoleRepository: UserRoleRepository,
-    private val passwordEncoder: PasswordEncoder
+    private val passwordEncoder: PasswordEncoder,
+    private val fileStorageService: FileStorageService
+
 ) {
 
+    // =========================================================
+    // CREATE
+    // =========================================================
+    @Transactional
     fun createUser(dto: CreateUserDTO): UserDTO {
 
         if (userRepository.existsByEmail(dto.email))
@@ -37,7 +45,7 @@ class UserService(
             deletedAt = null
         )
 
-        val saved = userRepository.save(user)
+        userRepository.save(user)
 
         dto.roles.forEach { roleName ->
             val role = roleRepository.findByName(roleName)
@@ -45,16 +53,19 @@ class UserService(
 
             userRoleRepository.save(
                 UserRole(
-                    id = UserRoleId(saved.id!!, role.id),
-                    user = saved,
+                    id = UserRoleId(user.id!!, role.id),
+                    user = user,
                     role = role
                 )
             )
         }
 
-        return getUserDTOWithRoles(saved)
+        return getUserDTOWithRoles(user)
     }
 
+    // =========================================================
+    // READ
+    // =========================================================
     fun listActiveUsers(): List<UserDTO> =
         userRepository.findAllByActiveTrue()
             .map { getUserDTOWithRoles(it) }
@@ -66,6 +77,12 @@ class UserService(
         return getUserDTOWithRoles(user)
     }
 
+    fun findByEmail(email: String): User? =
+        userRepository.findByEmailAndActiveTrue(email)
+
+    // =========================================================
+    // UPDATE
+    // =========================================================
     @Transactional
     fun updateUser(id: UUID, dto: UpdateUserDTO): UserDTO {
         val user = userRepository.findByIdAndActiveTrue(id)
@@ -73,8 +90,6 @@ class UserService(
 
         dto.fullName?.let { user.fullName = it }
         dto.password?.let { user.passwordHash = passwordEncoder.encode(it) }
-
-        userRepository.save(user)
 
         if (dto.roles != null) {
             userRoleRepository.deleteRolesByUserId(user.id!!)
@@ -96,34 +111,64 @@ class UserService(
         return getUserDTOWithRoles(user)
     }
 
+    // =========================================================
+    // SOFT DELETE (FUENTE DE VERDAD)
+    // =========================================================
+    @Transactional
     fun softDeleteUser(id: UUID) {
         val user = userRepository.findByIdAndActiveTrue(id)
             ?: throw IllegalArgumentException("User not found or already inactive")
 
         user.active = false
         user.deletedAt = LocalDateTime.now()
-
-        userRepository.save(user)
     }
 
+    @Transactional
     fun restoreUser(id: UUID) {
         val user = userRepository.findById(id)
             .orElseThrow { IllegalArgumentException("User not found") }
 
+        if (user.active) return
+
         user.active = true
         user.deletedAt = null
-
-        userRepository.save(user)
     }
 
+    // =========================================================
+    // MAPPER
+    // =========================================================
     fun getUserDTOWithRoles(user: User): UserDTO {
         val roles = userRoleRepository.findByUserId(user.id!!)
             .map { it.role.name }
 
         return UserMapper.toDTO(user, roles)
     }
-    fun findByEmail(email: String): User? {
-        return userRepository.findByEmailAndActiveTrue(email)
+
+    fun listInactiveUsers(): List<UserDTO> =
+        userRepository.findAllByActiveFalse()
+            .map { getUserDTOWithRoles(it) }
+
+    @Transactional
+    fun updatePhoto(userId: UUID, file: MultipartFile) {
+        val user = userRepository.findByIdAndActiveTrue(userId)
+            ?: throw IllegalArgumentException("User not found or inactive")
+
+        val contentType = file.contentType ?: ""
+        if (!contentType.startsWith("image/")) {
+            throw IllegalArgumentException("Only image files are allowed")
+        }
+
+        val url = fileStorageService.store(file, "users")
+        user.photoUrl = url
     }
+
+    @Transactional
+    fun removePhoto(userId: UUID) {
+        val user = userRepository.findByIdAndActiveTrue(userId)
+            ?: throw IllegalArgumentException("User not found or inactive")
+
+        user.photoUrl = null
+    }
+
 
 }

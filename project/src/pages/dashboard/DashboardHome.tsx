@@ -11,12 +11,14 @@ import {
   Divider,
   Spinner,
   Text,
+  Avatar,
 } from "@chakra-ui/react";
 
 import { useAuth } from "../../contexts/AuthContext";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "../../config/api";
 
 interface DashboardStats {
   vacancies: number;
@@ -100,17 +102,20 @@ export default function DashboardHome() {
 
   return (
     <Box>
-      <Box mb={10}>
-        <Heading size="lg">Bienvenido, {user?.fullName}</Heading>
-        <Box fontSize="md" mt={2} color="gray.500">
-          Rol: {role}
-        </Box>
-        {error && (
-          <Text mt={2} fontSize="sm" color="orange.400">
-            {error}
-          </Text>
-        )}
-      </Box>
+<Flex align="center" gap={4}>
+  <Avatar
+    src={user?.photoUrl ? `${API_URL}${user.photoUrl}` : undefined}
+    name={user?.fullName}
+    size="lg"
+  />
+
+  <Box>
+    <Heading size="lg">Bienvenido, {user?.fullName}</Heading>
+    <Box fontSize="md" mt={1} color="gray.500">
+      Rol: {role}
+    </Box>
+  </Box>
+</Flex>
 
       <Divider mb={10} />
 

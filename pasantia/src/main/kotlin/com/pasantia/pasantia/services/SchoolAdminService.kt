@@ -8,7 +8,6 @@ import com.pasantia.pasantia.entities.UserRole
 import com.pasantia.pasantia.entities.UserRoleId
 import com.pasantia.pasantia.mappers.SchoolAdminMapper
 import com.pasantia.pasantia.repositories.*
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -22,10 +21,13 @@ class SchoolAdminService(
     private val userRepository: UserRepository,
     private val roleRepository: RoleRepository,
     private val userRoleRepository: UserRoleRepository,
-    private val passwordEncoder: PasswordEncoder
-
+    private val passwordEncoder: PasswordEncoder,
+    private val userService: UserService
 ) {
 
+    // ============================================================
+    // READ
+    // ============================================================
     fun list(): List<SchoolAdminDTO> =
         schoolAdminRepository.findAllByActiveTrue()
             .map { SchoolAdminMapper.toDTO(it) }
@@ -41,28 +43,9 @@ class SchoolAdminService(
         return SchoolAdminMapper.toDTO(admin)
     }
 
-    @Transactional
-    fun softDelete(id: UUID) {
-        val admin = schoolAdminRepository.findByIdAndActiveTrue(id)
-            ?: throw IllegalArgumentException("SchoolAdmin not found or already inactive")
-
-        admin.active = false
-        admin.deletedAt = LocalDateTime.now()
-
-        schoolAdminRepository.save(admin)
-    }
-
-    @Transactional
-    fun restore(id: UUID) {
-        val admin = schoolAdminRepository.findById(id)
-            .orElseThrow { IllegalArgumentException("SchoolAdmin not found") }
-
-        admin.active = true
-        admin.deletedAt = null
-
-        schoolAdminRepository.save(admin)
-    }
-
+    // ============================================================
+    // CREATE
+    // ============================================================
     @Transactional
     fun createSchoolAdmin(schoolId: UUID, dto: CreateAdminForEntityDTO): SchoolAdminDTO {
 
@@ -78,24 +61,58 @@ class SchoolAdminService(
             passwordHash = passwordEncoder.encode(dto.password),
             active = true
         )
-        val saved = userRepository.save(user)
+        userRepository.save(user)
 
         val role = roleRepository.findByName("SCHOOL_ADMIN")
             ?: throw IllegalArgumentException("Role SCHOOL_ADMIN not found")
 
-        val userRole = UserRole(
-            id = UserRoleId(saved.id!!, role.id!!),
-            user = saved,
-            role = role
+        userRoleRepository.save(
+            UserRole(
+                id = UserRoleId(user.id!!, role.id!!),
+                user = user,
+                role = role
+            )
         )
-        userRoleRepository.save(userRole)
 
         val admin = SchoolAdmin(
-            user = saved,
-            school = school
+            user = user,
+            school = school,
+            active = true,
+            deletedAt = null
         )
 
-        return SchoolAdminMapper.toDTO(schoolAdminRepository.save(admin))
+        schoolAdminRepository.save(admin)
+
+        return SchoolAdminMapper.toDTO(admin)
     }
 
+    // ============================================================
+    // DELETE (CORRECTO)
+    // ============================================================
+    @Transactional
+    fun delete(id: UUID) {
+        val admin = schoolAdminRepository.findByIdAndActiveTrue(id)
+            ?: throw IllegalArgumentException("SchoolAdmin not found or already inactive")
+
+        // 🔥 fuente de verdad
+        userService.softDeleteUser(admin.user.id!!)
+
+        // estado informativo
+        admin.active = false
+        admin.deletedAt = LocalDateTime.now()
+    }
+
+    // ============================================================
+    // RESTORE
+    // ============================================================
+    @Transactional
+    fun restore(id: UUID) {
+        val admin = schoolAdminRepository.findById(id)
+            .orElseThrow { IllegalArgumentException("SchoolAdmin not found") }
+
+        userService.restoreUser(admin.user.id!!)
+
+        admin.active = true
+        admin.deletedAt = null
+    }
 }

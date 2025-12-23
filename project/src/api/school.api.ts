@@ -56,7 +56,18 @@ export const schoolsApi = {
     const res = await axios.put(`/admin/school-admins/${adminId}`, dto);
     return res.data;
   },
+  
+ uploadLogo: async (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
 
+    await axios.patch(`/admin/schools/${id}/logo`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
 
+  removeLogo: async (id: string) => {
+    await axios.patch(`/admin/schools/${id}/logo/remove`);
+  }, 
   
 };

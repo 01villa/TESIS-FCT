@@ -28,6 +28,11 @@ data class Vacancy(
     @JoinColumn(name = "company_id", nullable = false)
     var company: Company,
 
+    // 👉 NUEVO: Vacancy → Specialty
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "specialty_id", nullable = false)
+    var specialty: Specialty,
+
     @CreatedBy
     @Column(name = "created_by", nullable = true)
     var createdBy: String? = null,

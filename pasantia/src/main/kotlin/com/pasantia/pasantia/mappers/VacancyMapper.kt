@@ -9,6 +9,8 @@ object VacancyMapper {
         VacancyDTO(
             id = v.id,
             companyId = v.company.id,
+            specialtyId = v.specialty.id,
+            specialtyName = v.specialty.name,
             title = v.title,
             description = v.description,
             requirements = v.requirements,

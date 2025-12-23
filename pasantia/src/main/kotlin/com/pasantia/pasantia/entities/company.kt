@@ -30,6 +30,8 @@ data class Company(
     @Column(nullable = false)
     override var active: Boolean = true,
 
+    @Column(name = "logo_url")
+    var logoUrl: String? = null,
     @Column
     override var deletedAt: LocalDateTime? = null,
 

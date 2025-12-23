@@ -8,13 +8,18 @@ import com.pasantia.pasantia.mappers.CompanyMapper
 import com.pasantia.pasantia.repositories.CompanyRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.multipart.MultipartFile
 import java.time.LocalDateTime
 import java.util.*
 
 @Service
 class CompanyService(
-    private val companyRepository: CompanyRepository
+    private val companyRepository: CompanyRepository,
+    private val fileStorageService: FileStorageService,
+
+
 ) {
+
 
     /** ============================
      * CREATE COMPANY
@@ -89,4 +94,32 @@ class CompanyService(
 
         companyRepository.save(company)
     }
+
+
+    @Transactional
+    fun updateLogo(companyId: UUID, file: MultipartFile) {
+        val company = companyRepository.findByIdAndActiveTrue(companyId)
+            ?: throw IllegalArgumentException("Company not found or inactive")
+
+        val contentType = file.contentType ?: ""
+        if (!contentType.startsWith("image/")) {
+            throw IllegalArgumentException("Only image files are allowed")
+        }
+
+        val url = fileStorageService.store(file, "companies")
+        company.logoUrl = url
+    }
+
+    @Transactional
+    fun removeLogo(companyId: UUID) {
+        val company = companyRepository.findByIdAndActiveTrue(companyId)
+            ?: throw IllegalArgumentException("Company not found or inactive")
+
+        company.logoUrl = null
+        company.updatedAt = LocalDateTime.now()
+
+        companyRepository.save(company)
+    }
+
+
 }

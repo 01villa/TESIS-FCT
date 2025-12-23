@@ -8,6 +8,7 @@ import com.pasantia.pasantia.services.SchoolAdminService
 import com.pasantia.pasantia.services.SchoolService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.multipart.MultipartFile
 import java.util.*
 
 @RestController
@@ -73,5 +74,20 @@ class SchoolController(
     ): ResponseEntity<SchoolAdminDTO> {
         val result = schoolAdminService.createSchoolAdmin(id, dto)
         return ResponseEntity.ok(result)
+    }
+
+    @PatchMapping("/{id}/logo")
+    fun uploadSchoolLogo(
+        @PathVariable id: UUID,
+        @RequestParam("file") file: MultipartFile
+    ): ResponseEntity<Void> {
+        schoolService.updateLogo(id, file)
+        return ResponseEntity.noContent().build()
+    }
+
+    @PatchMapping("/{id}/logo/remove")
+    fun removeLogo(@PathVariable id: UUID): ResponseEntity<Void> {
+        schoolService.removeLogo(id)
+        return ResponseEntity.noContent().build()
     }
 }

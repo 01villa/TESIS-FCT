@@ -4,4 +4,8 @@ export interface StudentBasicDTO {
   ci: string;
   phone: string | null;
   userId: string;
+  photoUrl?: string | null;
+
+  specialtyId?: string;
+  specialtyName?: string;
 }

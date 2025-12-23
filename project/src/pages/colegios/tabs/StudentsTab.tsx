@@ -18,14 +18,14 @@ import {
 } from "@chakra-ui/react";
 
 import { useEffect, useState } from "react";
-
 import { ChevronDownIcon, ChevronUpIcon } from "@chakra-ui/icons";
+
 import { schoolStudentsApi } from "../../../api/school.students.api";
+import { usersApi } from "../../../api/users.api";
 
 import CreateSchoolStudentModal from "./CreateSchoolStudentModal";
 import EditSchoolStudentModal from "./EditSchoolStudentModal";
 import StudentDetailModal from "./StudentDetailModal";
-import { usersApi } from "../../../api/users.api";
 
 interface Filters {
   search: string;
@@ -49,33 +49,38 @@ export default function StudentsTab({ schoolId }: any) {
   const [sortField, setSortField] = useState("fullName");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-const load = async () => {
-  setLoading(true);
+  // ======================================================
+  // LOAD DATA
+  // ======================================================
+  const load = async () => {
+    setLoading(true);
 
-  // 1️⃣ Obtener estudiantes
-  const data = await schoolStudentsApi.listBySchool(schoolId);
+    // 1️⃣ Estudiantes de la escuela
+    const data = await schoolStudentsApi.listBySchool(schoolId);
 
-  // 2️⃣ Obtener usuarios para traer email
-  const users = await usersApi.list(); // ya lo tienes hecho en tu proyecto
+    // 2️⃣ Usuarios (para email)
+    const users = await usersApi.list();
 
-  // 3️⃣ Merge: agregar email desde user
-  const merged = data.map((s: any) => {
-    const user = users.find((u: any) => u.id === s.userId);
-    return {
-      ...s,
-      email: user ? user.email : "—",
-    };
-  });
+    // 3️⃣ Merge email
+    const merged = data.map((s: any) => {
+      const user = users.find((u: any) => u.id === s.userId);
+      return {
+        ...s,
+        email: user ? user.email : "—",
+      };
+    });
 
-  setStudents(merged);
-  setLoading(false);
-};
+    setStudents(merged);
+    setLoading(false);
+  };
 
   useEffect(() => {
     load();
   }, [schoolId]);
 
-  // FILTRO
+  // ======================================================
+  // FILTER
+  // ======================================================
   const filtered = students.filter((s) => {
     const matchesSearch =
       (s.fullName ?? "")
@@ -95,7 +100,9 @@ const load = async () => {
     return matchesSearch && matchesStatus;
   });
 
+  // ======================================================
   // SORT
+  // ======================================================
   const sorted = [...filtered].sort((a, b) => {
     let A = a[sortField];
     let B = b[sortField];
@@ -120,7 +127,11 @@ const load = async () => {
   };
 
   const sortIcon = (field: string) =>
-    sortField !== field ? null : sortOrder === "asc" ? <ChevronUpIcon /> : <ChevronDownIcon />;
+    sortField !== field ? null : sortOrder === "asc" ? (
+      <ChevronUpIcon />
+    ) : (
+      <ChevronDownIcon />
+    );
 
   if (loading)
     return (
@@ -131,6 +142,7 @@ const load = async () => {
 
   return (
     <Box>
+      {/* HEADER */}
       <Flex justify="space-between" align="center" mb={5}>
         <Heading size="md">Estudiantes de la Escuela</Heading>
 
@@ -188,6 +200,10 @@ const load = async () => {
                 Email {sortIcon("email")}
               </Th>
 
+              <Th cursor="pointer" onClick={() => toggleSort("specialtyName")}>
+                Especialidad {sortIcon("specialtyName")}
+              </Th>
+
               <Th cursor="pointer" onClick={() => toggleSort("deletedAt")}>
                 Estado {sortIcon("deletedAt")}
               </Th>
@@ -201,6 +217,7 @@ const load = async () => {
               <Tr key={s.id}>
                 <Td>{s.fullName}</Td>
                 <Td>{s.email}</Td>
+                <Td>{s.specialtyName ?? "—"}</Td>
 
                 <Td>
                   {!s.deletedAt ? (
@@ -212,7 +229,6 @@ const load = async () => {
 
                 <Td>
                   <Flex gap={3} justify="center">
-                    {/* VER MÁS */}
                     <Button
                       size="sm"
                       colorScheme="blue"
@@ -224,7 +240,6 @@ const load = async () => {
                       Ver más
                     </Button>
 
-                    {/* EDITAR */}
                     <Button
                       size="sm"
                       colorScheme="yellow"
@@ -236,7 +251,6 @@ const load = async () => {
                       Editar
                     </Button>
 
-                    {/* ELIMINAR / RESTAURAR */}
                     {!s.deletedAt ? (
                       <Button
                         size="sm"

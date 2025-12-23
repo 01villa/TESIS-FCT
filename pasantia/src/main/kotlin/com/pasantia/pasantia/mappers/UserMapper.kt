@@ -13,6 +13,8 @@ object UserMapper {
         deletedAt = user.deletedAt,
         roles = roles,
         createdAt = user.createdAt,
-        updatedAt = user.updatedAt
+        updatedAt = user.updatedAt,
+        photoUrl = user.photoUrl
+
     )
 }

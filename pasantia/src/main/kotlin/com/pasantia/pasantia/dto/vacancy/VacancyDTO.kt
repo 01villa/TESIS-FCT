@@ -7,6 +7,8 @@ import java.util.UUID
 data class VacancyDTO(
     val id: UUID,
     val companyId: UUID,
+    val specialtyId: UUID,        // 👈 NUEVO
+    val specialtyName: String,    // 👈 NUEVO
     val title: String,
     val description: String?,
     val requirements: List<String>?,
