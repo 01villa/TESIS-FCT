@@ -1,16 +1,12 @@
 package com.pasantia.pasantia.entities
 
+import com.pasantia.pasantia.common.AuditableEntity
 import com.pasantia.pasantia.common.SoftDeletable
 import jakarta.persistence.*
-import org.springframework.data.annotation.CreatedBy
-import org.springframework.data.annotation.CreatedDate
-import org.springframework.data.annotation.LastModifiedDate
-import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.LocalDateTime
 import java.util.*
 
 @Entity
-@EntityListeners(AuditingEntityListener::class)
 @Table(
     name = "students",
     uniqueConstraints = [
@@ -55,20 +51,9 @@ data class Student(
     override var active: Boolean = true,
 
     @Column
-    override var deletedAt: LocalDateTime? = null,
+    override var deletedAt: LocalDateTime? = null
 
-    // Auditoría
-    @CreatedBy
-    @Column(name = "created_by")
-    var createdBy: String? = null,
-
-    @CreatedDate
-    var createdAt: LocalDateTime? = null,
-
-    @LastModifiedDate
-    var updatedAt: LocalDateTime? = null
-
-) : SoftDeletable {
+) : AuditableEntity(), SoftDeletable {
 
     val fullName: String get() = "$firstName $lastName"
 }

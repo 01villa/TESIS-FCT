@@ -40,7 +40,6 @@ export default function Sidebar() {
       { label: "Colegios", to: "/dashboard/schools", icon: FaSchool },
       { label: "Empresas", to: "/dashboard/companies", icon: FaBuilding },
       { label: "Usuarios", to: "/dashboard/users", icon: FaUsers },
-      { label: "Reportes", to: "/dashboard/reports", icon: FaFileAlt },
     ],
 
     SCHOOL_ADMIN: [

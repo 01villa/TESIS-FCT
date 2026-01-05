@@ -1,37 +1,50 @@
 package com.pasantia.pasantia.entities
 
 import jakarta.persistence.*
+import org.hibernate.annotations.UuidGenerator
 import java.time.LocalDateTime
+import java.util.*
 
 @Entity
 @Table(name = "audit_logs")
-data class AuditLog(
+class AuditLog(
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long = 0,
-
-    @Column(name = "actor_id", nullable = false)
-    val actorId: java.util.UUID,
-
-    @Column(nullable = false, length = 100)
-    val action: String,
-
-    @Column(name = "entity_type", nullable = false, length = 50)
-    val entityType: String,
-
-    @Column(name = "entity_id", nullable = false, length = 50)
-    val entityId: String,
-
-    @Column(columnDefinition = "JSONB")
-    val details: String? = null,
-
-    @Column(columnDefinition = "INET")
-    val ip: String? = null,
-
-    @Column(columnDefinition = "TEXT")
-    val userAgent: String? = null,
+    @UuidGenerator
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    var id: UUID? = null,
 
     @Column(nullable = false)
-    val createdAt: LocalDateTime? = LocalDateTime.now()
+    var timestamp: LocalDateTime = LocalDateTime.now(),
+
+    @Column(name = "actor_email")
+    var actorEmail: String? = null,
+
+    @Column(nullable = false, length = 10)
+    var method: String,
+
+    @Column(nullable = false, length = 255)
+    var path: String,
+
+    @Column(length = 500)
+    var query: String? = null,
+
+    @Column(length = 50)
+    var ip: String? = null,
+
+    @Column(length = 255)
+    var userAgent: String? = null,
+
+    var status: Int? = null,
+
+    @Column(nullable = false)
+    var success: Boolean = true,
+
+    @Column(length = 100)
+    var errorCode: String? = null,
+
+    @Column(length = 500)
+    var errorMessage: String? = null,
+
+    var tookMs: Long? = null
 )

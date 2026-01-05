@@ -37,6 +37,7 @@ class SecurityConfig(
                 // ============================
                 // ADMIN GENERAL
                 // ============================
+                it.requestMatchers("/admin/audit-logs/**").hasRole("ADMIN")
                 it.requestMatchers("/students/**")
                     .hasRole("ADMIN")
 

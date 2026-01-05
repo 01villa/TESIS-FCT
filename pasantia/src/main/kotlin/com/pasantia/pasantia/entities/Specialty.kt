@@ -1,9 +1,7 @@
 package com.pasantia.pasantia.entities
 
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.Id
-import jakarta.persistence.Table
+import com.pasantia.pasantia.common.AuditableEntity
+import jakarta.persistence.*
 import java.util.UUID
 
 @Entity
@@ -22,4 +20,5 @@ data class Specialty(
 
     @Column(nullable = false)
     var active: Boolean = true
-)
+
+) : AuditableEntity()

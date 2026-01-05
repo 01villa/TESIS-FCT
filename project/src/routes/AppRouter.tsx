@@ -1,6 +1,5 @@
 // src/router/AppRouter.tsx
-
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import LandingPage from "../pages/LandingPage";
 import Login from "../modules/auth/Login";
@@ -36,15 +35,14 @@ import AssignmentsList from "../pages/companies/companyTutor/AssignmentsList";
 import CompanyTutorDashboard from "../pages/companies/companyTutor/CompanyTutorDashboard";
 import CompanyVacancies from "../pages/companies/companyTutor/CompanyVacancies";
 
-// ============================
-//  COMPANY TUTOR (NUEVO)
-// ============================
+// ✅ Páginas
+import { NotFoundPage } from "../pages/NotFoundPage";
+// import { UnauthorizedPage } from "../pages/UnauthorizedPage"; // si ya la usas
 
 export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-
         {/* 🔓 PUBLIC ROUTES */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
@@ -78,26 +76,27 @@ export default function AppRouter() {
           {/* COMPANY ADMIN */}
           <Route path="company" element={<CompanyProfile />} />
 
-          {/* ========================================================
-                SCHOOL TUTOR (FUNCIONALES)
-             ======================================================== */}
+          {/* SCHOOL TUTOR */}
           <Route path="tutor" element={<TutorHome />} />
           <Route path="tutor/vacancies" element={<TutorVacancies />} />
           <Route path="tutor/assign" element={<TutorAssign />} />
           <Route path="tutor/assignments" element={<TutorAssignments />} />
           <Route path="tutor/students" element={<TutorStudentsPage />} />
 
-          {/* ========================================================
-                COMPANY TUTOR (NUEVO - lo que hicimos)
-             ======================================================== */}
+          {/* COMPANY TUTOR */}
           <Route path="company-tutor" element={<CompanyTutorDashboard />} />
           <Route path="company-tutor/vacancies" element={<CompanyVacancies />} />
           <Route path="company-tutor/assignments" element={<AssignmentsList />} />
 
+          {/* ✅ 404 dentro del dashboard */}
+          <Route path="*" element={<Navigate to="/404" replace />} />
         </Route>
 
-        {/* 404 */}
-        <Route path="*" element={<h2>Página no encontrada</h2>} />
+        {/* ✅ Ruta explícita 404 */}
+        <Route path="/404" element={<NotFoundPage />} />
+
+        {/* ✅ 404 global */}
+        <Route path="*" element={<Navigate to="/404" replace />} />
       </Routes>
     </BrowserRouter>
   );
