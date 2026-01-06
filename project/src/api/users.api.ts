@@ -28,19 +28,19 @@ export const usersApi = {
   // UPDATE DATA
   // =========================
   update: async (
-    id: string,
-    dto: {
-      fullName: string;
-      email: string;
-      password?: string;
-    }
-  ) => {
-    const res = await axios.put(`/admin/users/${id}`, {
-      ...dto,
-      roles: ["ADMIN"],
-    });
-    return res.data;
-  },
+  id: string,
+  dto: {
+    fullName: string;
+    email: string;
+    password?: string;
+  }
+) => {
+  const res = await axios.put(`/admin/users/${id}`, {
+    ...dto,
+    password: dto.password?.trim() ? dto.password : undefined,
+  });
+  return res.data;
+},
 
   // =========================
   // DELETE USER (soft delete)

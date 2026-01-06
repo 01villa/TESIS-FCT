@@ -12,19 +12,27 @@ import {
   Input,
   Select,
   useDisclosure,
+  Icon,
 } from "@chakra-ui/react";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronDownIcon, ChevronUpIcon } from "@chakra-ui/icons";
+
 import { companyTutorApi } from "../../../api/companyTutors.api";
 import CreateCompanyTutorModal from "./CreateCompanyTutorModal";
 import EditCompanyTutorModal from "./EditCompanyTutorModal";
 
+import UserCell from "../../../components/UserCell";
+
+type SortField = "fullName" | "email" | "deletedAt";
+type SortOrder = "asc" | "desc";
+
 export default function CompanyTutorsTab({ companyId }: { companyId: string }) {
   const [tutors, setTutors] = useState<any[]>([]);
-  const [filtered, setFiltered] = useState<any[]>([]);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("all");
-  const [sort, setSort] = useState<{ field: string; direction: "asc" | "desc" }>({
+  const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
+
+  const [sort, setSort] = useState<{ field: SortField; direction: SortOrder }>({
     field: "fullName",
     direction: "asc",
   });
@@ -36,71 +44,89 @@ export default function CompanyTutorsTab({ companyId }: { companyId: string }) {
 
   const load = async () => {
     const data = await companyTutorApi.listByCompany(companyId);
-    setTutors(data);
-    setFiltered(data);
+    setTutors(data ?? []);
   };
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId]);
 
-  useEffect(() => {
+  const filtered = useMemo(() => {
     let f = [...tutors];
 
-    // FILTRO
-    if (search.trim() !== "") {
+    const q = search.trim().toLowerCase();
+    if (q) {
       f = f.filter(
         (t) =>
-          t.fullName.toLowerCase().includes(search.toLowerCase()) ||
-          t.email.toLowerCase().includes(search.toLowerCase())
+          (t.fullName ?? "").toLowerCase().includes(q) ||
+          (t.email ?? "").toLowerCase().includes(q)
       );
     }
 
-    // ESTADO
     if (status !== "all") {
       const active = status === "active";
-      f = f.filter((t) => (active ? !t.deletedAt : t.deletedAt));
+      f = f.filter((t) => (active ? !t.deletedAt : !!t.deletedAt));
     }
 
-    // ORDENAMIENTO
     f.sort((a, b) => {
-      const fa = a[sort.field]?.toString().toLowerCase();
-      const fb = b[sort.field]?.toString().toLowerCase();
+      let A: any = a[sort.field];
+      let B: any = b[sort.field];
 
-      if (fa < fb) return sort.direction === "asc" ? -1 : 1;
-      if (fa > fb) return sort.direction === "asc" ? 1 : -1;
+      if (typeof A === "string") {
+        A = A.toLowerCase();
+        B = (B ?? "").toString().toLowerCase();
+      }
+
+      // nulls al final
+      if (A == null && B == null) return 0;
+      if (A == null) return 1;
+      if (B == null) return -1;
+
+      if (A < B) return sort.direction === "asc" ? -1 : 1;
+      if (A > B) return sort.direction === "asc" ? 1 : -1;
       return 0;
     });
 
-    setFiltered(f);
-  }, [search, status, sort, tutors]);
+    return f;
+  }, [tutors, search, status, sort]);
 
-  const toggleSort = (field: string) => {
-    setSort((prev) => ({
-      field,
-      direction: prev.direction === "asc" ? "desc" : "asc",
-    }));
+  const toggleSort = (field: SortField) => {
+    setSort((prev) => {
+      if (prev.field === field) {
+        return { field, direction: prev.direction === "asc" ? "desc" : "asc" };
+      }
+      return { field, direction: "asc" };
+    });
+  };
+
+  const sortIcon = (field: SortField) => {
+    if (sort.field !== field) return null;
+    return sort.direction === "asc" ? <Icon as={ChevronUpIcon} /> : <Icon as={ChevronDownIcon} />;
   };
 
   return (
     <Box>
-      <Flex justify="space-between" mb={4}>
-        <strong>Tutores</strong>
-
+      <Flex justify="space-between" mb={4} flexWrap="wrap" gap={3}>
         <Button colorScheme="blue" size="sm" onClick={createModal.onOpen}>
           + Nuevo Tutor
         </Button>
       </Flex>
 
       {/* FILTROS */}
-      <Flex gap={4} mb={4}>
+      <Flex gap={4} mb={4} flexWrap="wrap">
         <Input
-          placeholder="Buscar tutor..."
+          placeholder="Buscar por nombre o correo…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          maxW="360px"
         />
 
-        <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+        <Select
+          value={status}
+          onChange={(e) => setStatus(e.target.value as any)}
+          maxW="220px"
+        >
           <option value="all">Todos</option>
           <option value="active">Activos</option>
           <option value="inactive">Inactivos</option>
@@ -108,25 +134,34 @@ export default function CompanyTutorsTab({ companyId }: { companyId: string }) {
       </Flex>
 
       {/* TABLA */}
-      <Table>
-        <Thead>
+      <Table variant="simple" bg="white" rounded="md" shadow="sm">
+        <Thead bg="gray.50">
           <Tr>
-            <Th onClick={() => toggleSort("fullName")} cursor="pointer">
-              Nombre
+            <Th cursor="pointer" onClick={() => toggleSort("fullName")}>
+              Nombre {sortIcon("fullName")}
             </Th>
-            <Th onClick={() => toggleSort("email")} cursor="pointer">
-              Email
+
+            <Th cursor="pointer" onClick={() => toggleSort("email")}>
+              Email {sortIcon("email")}
             </Th>
-            <Th>Estado</Th>
+
+            <Th cursor="pointer" onClick={() => toggleSort("deletedAt")}>
+              Estado {sortIcon("deletedAt")}
+            </Th>
+
             <Th textAlign="center">Acciones</Th>
           </Tr>
         </Thead>
 
         <Tbody>
-          {filtered.map((t) => (
-            <Tr key={t.id}>
-              <Td>{t.fullName}</Td>
-              <Td>{t.email}</Td>
+          {filtered.map((t, idx) => (
+            <Tr key={t.id ?? `${t.email}-${idx}`}>
+              <Td>
+                <UserCell fullName={t.fullName ?? "—"} photoUrl={t.photoUrl ?? null} />
+              </Td>
+
+              <Td>{t.email ?? "—"}</Td>
+
               <Td>
                 {!t.deletedAt ? (
                   <Badge colorScheme="green">Activo</Badge>
@@ -136,7 +171,7 @@ export default function CompanyTutorsTab({ companyId }: { companyId: string }) {
               </Td>
 
               <Td>
-                <Flex gap={3} justify="center">
+                <Flex gap={3} justify="center" flexWrap="wrap">
                   <Button
                     size="sm"
                     colorScheme="yellow"
@@ -156,6 +191,7 @@ export default function CompanyTutorsTab({ companyId }: { companyId: string }) {
                         await companyTutorApi.delete(t.id);
                         load();
                       }}
+                      isDisabled={!t.id}
                     >
                       Eliminar
                     </Button>
@@ -167,6 +203,7 @@ export default function CompanyTutorsTab({ companyId }: { companyId: string }) {
                         await companyTutorApi.restore(t.id);
                         load();
                       }}
+                      isDisabled={!t.id}
                     >
                       Restaurar
                     </Button>
@@ -188,7 +225,10 @@ export default function CompanyTutorsTab({ companyId }: { companyId: string }) {
 
       <EditCompanyTutorModal
         isOpen={editModal.isOpen}
-        onClose={editModal.onClose}
+        onClose={() => {
+          editModal.onClose();
+          setSelectedTutor(null);
+        }}
         tutor={selectedTutor}
         onUpdated={load}
       />

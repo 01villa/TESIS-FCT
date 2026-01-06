@@ -11,6 +11,7 @@ object SchoolAdminMapper {
         schoolId = admin.school.id,
         fullName = admin.user.fullName,
         email = admin.user.email,
+        photoUrl = admin.user.photoUrl,
         active = admin.active,
         deletedAt = admin.deletedAt,
         createdAt = admin.createdAt,

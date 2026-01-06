@@ -11,6 +11,7 @@ object SchoolTutorMapper {
         userId = tutor.user.id!!,
         fullName = tutor.user.fullName,
         email = tutor.user.email,
+        photoUrl = tutor.user.photoUrl,
         phone = tutor.phone,
         active = tutor.active,
         deletedAt = tutor.deletedAt,

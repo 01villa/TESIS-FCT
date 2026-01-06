@@ -72,7 +72,6 @@ export default function CompanyVacanciesTab({ companyId }: { companyId: string }
   return (
     <Box>
       <Flex justify="space-between" mb={4} align="center">
-        <strong>Vacantes</strong>
 
         <Flex gap={4} align="center">
           {/* ✅ filtro por estado */}

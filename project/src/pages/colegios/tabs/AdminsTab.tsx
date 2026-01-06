@@ -15,26 +15,28 @@ import {
   Center,
   useDisclosure,
   Input,
+  Select,
+  Icon,
 } from "@chakra-ui/react";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import CreateSchoolAdminModal from "./CreateSchoolAdminModal";
 import EditSchoolAdminModal from "./EditSchoolAdminModal";
 import { schoolsApi } from "../../../api/school.api";
 
 import { ChevronDownIcon, ChevronUpIcon } from "@chakra-ui/icons";
-
-// =============================================
-// ==== FILTROS + ORDENAMIENTO =================
-// =============================================
+import UserCell from "../../../components/UserCell";
 
 interface Filters {
   search: string;
   status: "all" | "active" | "deleted";
 }
 
-export default function AdminsTab({ schoolId }: any) {
+type SortField = "fullName" | "email" | "deletedAt";
+type SortOrder = "asc" | "desc";
+
+export default function AdminsTab({ schoolId }: { schoolId: string }) {
   const [admins, setAdmins] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAdmin, setSelectedAdmin] = useState<any>(null);
@@ -42,87 +44,97 @@ export default function AdminsTab({ schoolId }: any) {
   const createModal = useDisclosure();
   const editModal = useDisclosure();
 
-  // filtros
   const [filters, setFilters] = useState<Filters>({
     search: "",
     status: "all",
   });
 
-  // orden
-  const [sortField, setSortField] = useState<string>("fullName");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [sortField, setSortField] = useState<SortField>("fullName");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
   const load = async () => {
     setLoading(true);
-    const data = await schoolsApi.listAdmins(schoolId);
-    setAdmins(data);
-    setLoading(false);
+    try {
+      const data = await schoolsApi.listAdmins(schoolId);
+      setAdmins(data ?? []);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schoolId]);
 
-  // ============================================
-  // FILTRO
-  // ============================================
+  const filtered = useMemo(() => {
+    const q = filters.search.trim().toLowerCase();
 
-  const filtered = admins.filter((admin) => {
-    const matchesSearch =
-      admin.fullName.toLowerCase().includes(filters.search.toLowerCase()) ||
-      admin.email.toLowerCase().includes(filters.search.toLowerCase());
+    return admins.filter((admin) => {
+      const fullName = (admin.fullName ?? "").toLowerCase();
+      const email = (admin.email ?? "").toLowerCase();
 
-    const matchesStatus =
-      filters.status === "all"
-        ? true
-        : filters.status === "active"
-        ? admin.deletedAt === null
-        : admin.deletedAt !== null;
+      const matchesSearch = q ? fullName.includes(q) || email.includes(q) : true;
 
-    return matchesSearch && matchesStatus;
-  });
+      const matchesStatus =
+        filters.status === "all"
+          ? true
+          : filters.status === "active"
+          ? !admin.deletedAt
+          : !!admin.deletedAt;
 
-  // ============================================
-  // ORDENAMIENTO DINÁMICO
-  // ============================================
+      return matchesSearch && matchesStatus;
+    });
+  }, [admins, filters.search, filters.status]);
 
-  const sorted = [...filtered].sort((a, b) => {
-    let fieldA = a[sortField];
-    let fieldB = b[sortField];
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
 
-    // manejar deletedAt como booleano
-    if (sortField === "deletedAt") {
-      fieldA = fieldA ? 1 : 0;
-      fieldB = fieldB ? 1 : 0;
-    }
+    arr.sort((a, b) => {
+      let A: any = a[sortField];
+      let B: any = b[sortField];
 
-    if (typeof fieldA === "string") {
-      fieldA = fieldA.toLowerCase();
-      fieldB = fieldB.toLowerCase();
-    }
+      // deletedAt como booleano (activo primero si asc)
+      if (sortField === "deletedAt") {
+        A = A ? 1 : 0;
+        B = B ? 1 : 0;
+      }
 
-    if (fieldA < fieldB) return sortOrder === "asc" ? -1 : 1;
-    if (fieldA > fieldB) return sortOrder === "asc" ? 1 : -1;
-    return 0;
-  });
+      if (typeof A === "string") {
+        A = A.toLowerCase();
+        B = (B ?? "").toString().toLowerCase();
+      }
 
-  const toggleSort = (field: string) => {
+      // nulls al final
+      if (A == null && B == null) return 0;
+      if (A == null) return 1;
+      if (B == null) return -1;
+
+      if (A < B) return sortOrder === "asc" ? -1 : 1;
+      if (A > B) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return arr;
+  }, [filtered, sortField, sortOrder]);
+
+  const toggleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       setSortField(field);
       setSortOrder("asc");
     }
   };
 
-  const sortIcon = (field: string) => {
+  const sortIcon = (field: SortField) => {
     if (sortField !== field) return null;
-    return sortOrder === "asc" ? <ChevronUpIcon /> : <ChevronDownIcon />;
+    return sortOrder === "asc" ? (
+      <Icon as={ChevronUpIcon} />
+    ) : (
+      <Icon as={ChevronDownIcon} />
+    );
   };
-
-  // ============================================
-  // UI
-  // ============================================
 
   if (loading)
     return (
@@ -134,7 +146,13 @@ export default function AdminsTab({ schoolId }: any) {
   return (
     <Box>
       {/* HEADER */}
-      <Flex justify="space-between" align="center" mb={5}>
+      <Flex
+        justify="space-between"
+        align={{ base: "flex-start", md: "center" }}
+        mb={5}
+        flexWrap="wrap"
+        gap={3}
+      >
         <Heading size="md">Administradores de la Escuela</Heading>
 
         <Button colorScheme="blue" onClick={createModal.onOpen}>
@@ -143,32 +161,28 @@ export default function AdminsTab({ schoolId }: any) {
       </Flex>
 
       {/* FILTROS */}
-   <Flex gap={4} mb={5}>
-  <Input
-    placeholder="Buscar por nombre o correo…"
-    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-      setFilters((prev) => ({ ...prev, search: e.target.value }))
-    }
-  />
+      <Flex gap={4} mb={5} flexWrap="wrap">
+        <Input
+          placeholder="Buscar por nombre o correo…"
+          value={filters.search}
+          onChange={(e) =>
+            setFilters((prev) => ({ ...prev, search: e.target.value }))
+          }
+          maxW="360px"
+        />
 
-  <select
-    style={{
-      padding: "8px",
-      borderRadius: "6px",
-      border: "1px solid #ccc",
-    }}
-    onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-      setFilters((prev) => ({
-        ...prev,
-        status: e.target.value as any,
-      }))
-    }
-  >
-    <option value="all">Todos</option>
-    <option value="active">Activos</option>
-    <option value="deleted">Eliminados</option>
-  </select>
-</Flex>
+        <Select
+          value={filters.status}
+          onChange={(e) =>
+            setFilters((prev) => ({ ...prev, status: e.target.value as any }))
+          }
+          maxW="220px"
+        >
+          <option value="all">Todos</option>
+          <option value="active">Activos</option>
+          <option value="deleted">Eliminados</option>
+        </Select>
+      </Flex>
 
       {/* LISTA VACÍA */}
       {sorted.length === 0 && (
@@ -187,8 +201,8 @@ export default function AdminsTab({ schoolId }: any) {
 
       {/* TABLA */}
       {sorted.length > 0 && (
-        <Table variant="simple">
-          <Thead>
+        <Table variant="simple" bg="white" rounded="md" shadow="sm">
+          <Thead bg="gray.50">
             <Tr>
               <Th cursor="pointer" onClick={() => toggleSort("fullName")}>
                 Nombre {sortIcon("fullName")}
@@ -198,11 +212,7 @@ export default function AdminsTab({ schoolId }: any) {
                 Email {sortIcon("email")}
               </Th>
 
-              <Th
-                cursor="pointer"
-                onClick={() => toggleSort("deletedAt")}
-                textAlign="left"
-              >
+              <Th cursor="pointer" onClick={() => toggleSort("deletedAt")}>
                 Estado {sortIcon("deletedAt")}
               </Th>
 
@@ -211,10 +221,17 @@ export default function AdminsTab({ schoolId }: any) {
           </Thead>
 
           <Tbody>
-            {sorted.map((admin) => (
-              <Tr key={admin.id}>
-                <Td>{admin.fullName}</Td>
-                <Td>{admin.email}</Td>
+            {sorted.map((admin: any, idx: number) => (
+              <Tr key={admin.id ?? `${admin.email}-${idx}`}>
+                {/* Avatar + Nombre */}
+                <Td>
+                  <UserCell
+                    fullName={admin.fullName ?? "—"}
+                    photoUrl={admin.photoUrl ?? null}
+                  />
+                </Td>
+
+                <Td>{admin.email ?? "—"}</Td>
 
                 <Td>
                   {!admin.deletedAt ? (
@@ -225,7 +242,7 @@ export default function AdminsTab({ schoolId }: any) {
                 </Td>
 
                 <Td>
-                  <Flex gap={3} justify="center">
+                  <Flex gap={3} justify="center" flexWrap="wrap">
                     <Button
                       colorScheme="yellow"
                       size="sm"
@@ -233,6 +250,7 @@ export default function AdminsTab({ schoolId }: any) {
                         setSelectedAdmin(admin);
                         editModal.onOpen();
                       }}
+                      isDisabled={!admin}
                     >
                       Editar
                     </Button>
@@ -245,6 +263,7 @@ export default function AdminsTab({ schoolId }: any) {
                           await schoolsApi.deleteAdmin(admin.id);
                           load();
                         }}
+                        isDisabled={!admin.id}
                       >
                         Eliminar
                       </Button>
@@ -256,6 +275,7 @@ export default function AdminsTab({ schoolId }: any) {
                           await schoolsApi.restoreAdmin(admin.id);
                           load();
                         }}
+                        isDisabled={!admin.id}
                       >
                         Restaurar
                       </Button>
@@ -278,7 +298,10 @@ export default function AdminsTab({ schoolId }: any) {
 
       <EditSchoolAdminModal
         isOpen={editModal.isOpen}
-        onClose={editModal.onClose}
+        onClose={() => {
+          editModal.onClose();
+          setSelectedAdmin(null);
+        }}
         admin={selectedAdmin}
         onUpdated={load}
       />

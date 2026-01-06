@@ -9,6 +9,7 @@ data class SchoolAdminDTO(
     val schoolId: UUID,
     val fullName: String,
     val email: String,
+    val photoUrl: String?,
     val active: Boolean,
     val deletedAt: LocalDateTime?,
     val createdAt: LocalDateTime?,

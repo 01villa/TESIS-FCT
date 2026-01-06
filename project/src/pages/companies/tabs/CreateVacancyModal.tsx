@@ -15,6 +15,7 @@ import {
   Spinner,
   Flex,
   Text,
+  useToast,
 } from "@chakra-ui/react";
 
 import { useEffect, useState } from "react";
@@ -26,23 +27,42 @@ type Specialty = {
   name: string;
 };
 
+type FormState = {
+  title: string;
+  description: string;
+  capacity: string; // lo mantengo string por el input
+  startDate: string;
+  endDate: string;
+  specialtyId: string;
+};
+
+type Props = {
+  isOpen: boolean;
+  onClose: () => void;
+  companyId: string;
+  onCreated?: () => void; // 👈 opcional
+};
+
 export default function CreateVacancyModal({
   isOpen,
   onClose,
   companyId,
   onCreated,
-}: any) {
-  const [form, setForm] = useState({
+}: Props) {
+  const toast = useToast();
+
+  const [form, setForm] = useState<FormState>({
     title: "",
     description: "",
     capacity: "",
     startDate: "",
     endDate: "",
-    specialtyId: "", // 👈 nuevo
+    specialtyId: "",
   });
 
   const [specialties, setSpecialties] = useState<Specialty[]>([]);
   const [loadingSpecialties, setLoadingSpecialties] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const reset = () => {
     setForm({
@@ -55,8 +75,8 @@ export default function CreateVacancyModal({
     });
   };
 
-  const update = (e: any) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const update = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+    setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
   const loadSpecialties = async () => {
     setLoadingSpecialties(true);
@@ -64,10 +84,18 @@ export default function CreateVacancyModal({
       const data = await specialtiesApi.list();
       setSpecialties(data);
 
-      // preselecciona para evitar crear sin especialidad
-      if (data.length > 0 && !form.specialtyId) {
-        setForm((p) => ({ ...p, specialtyId: data[0].id }));
+      // Preselecciona si no hay nada elegido
+      if (data.length > 0) {
+        setForm((p) => ({ ...p, specialtyId: p.specialtyId || data[0].id }));
       }
+    } catch (e) {
+      console.error(e);
+      toast({
+        title: "No se pudieron cargar especialidades",
+        status: "error",
+        duration: 2500,
+        isClosable: true,
+      });
     } finally {
       setLoadingSpecialties(false);
     }
@@ -83,20 +111,57 @@ export default function CreateVacancyModal({
   }, [isOpen]);
 
   const save = async () => {
+    // Validaciones mínimas (evitan requests basura)
+    if (!form.title.trim()) {
+      toast({ title: "El título es obligatorio", status: "warning", duration: 2000, isClosable: true });
+      return;
+    }
     if (!form.specialtyId) return;
 
-    await vacanciesApi.create(companyId, {
-      title: form.title,
-      description: form.description,
-      requirements: [],
-      capacity: Number(form.capacity),
-      startDate: form.startDate,
-      endDate: form.endDate,
-      specialtyId: form.specialtyId, // 👈 NUEVO
-    });
+    const capacity = Number(form.capacity);
+    if (!Number.isFinite(capacity) || capacity <= 0) {
+      toast({ title: "Cupos inválidos", status: "warning", duration: 2000, isClosable: true });
+      return;
+    }
 
-    onCreated();
-    onClose();
+    setSaving(true);
+    try {
+      await vacanciesApi.create(companyId, {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        requirements: [],
+        capacity,
+        startDate: form.startDate,
+        endDate: form.endDate,
+        specialtyId: form.specialtyId,
+      });
+
+      // ✅ Primero notifica y cierra (UX)
+      toast({
+        title: "Vacante creada",
+        status: "success",
+        duration: 2000,
+        isClosable: true,
+      });
+
+      // ✅ Cierra sin romper nada
+      reset();
+      onClose();
+
+      // ✅ Refresca si te pasaron callback (sin crash)
+      if (typeof onCreated === "function") onCreated();
+    } catch (e: any) {
+      console.error(e);
+      toast({
+        title: "Error al crear vacante",
+        description: e?.response?.data?.message || e?.message || "Intenta nuevamente",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -110,12 +175,12 @@ export default function CreateVacancyModal({
       <ModalOverlay />
       <ModalContent>
         <ModalHeader>Nueva Vacante</ModalHeader>
-        <ModalCloseButton />
+        <ModalCloseButton isDisabled={saving} />
 
         <ModalBody>
           <FormControl mb={3} isRequired>
             <FormLabel>Título</FormLabel>
-            <Input name="title" value={form.title} onChange={update} />
+            <Input name="title" value={form.title} onChange={update} isDisabled={saving} />
           </FormControl>
 
           <FormControl mb={3}>
@@ -124,6 +189,7 @@ export default function CreateVacancyModal({
               name="description"
               value={form.description}
               onChange={update}
+              isDisabled={saving}
             />
           </FormControl>
 
@@ -141,7 +207,7 @@ export default function CreateVacancyModal({
                 value={form.specialtyId}
                 onChange={update}
                 placeholder="Selecciona una especialidad"
-                isDisabled={!specialties.length}
+                isDisabled={!specialties.length || saving}
               >
                 {specialties.map((sp) => (
                   <option key={sp.id} value={sp.id}>
@@ -159,6 +225,7 @@ export default function CreateVacancyModal({
               name="capacity"
               value={form.capacity}
               onChange={update}
+              isDisabled={saving}
             />
           </FormControl>
 
@@ -169,6 +236,7 @@ export default function CreateVacancyModal({
               name="startDate"
               value={form.startDate}
               onChange={update}
+              isDisabled={saving}
             />
           </FormControl>
 
@@ -179,6 +247,7 @@ export default function CreateVacancyModal({
               name="endDate"
               value={form.endDate}
               onChange={update}
+              isDisabled={saving}
             />
           </FormControl>
         </ModalBody>
@@ -187,6 +256,7 @@ export default function CreateVacancyModal({
           <Button
             colorScheme="blue"
             onClick={save}
+            isLoading={saving}
             isDisabled={loadingSpecialties || !form.specialtyId}
           >
             Crear

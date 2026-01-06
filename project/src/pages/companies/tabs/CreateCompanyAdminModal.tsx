@@ -10,10 +10,20 @@ import {
   Input,
   FormLabel,
   VStack,
+  Avatar,
+  Flex,
+  Text,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
 } from "@chakra-ui/react";
 
-import { useState } from "react";
-import { companyAdminApi } from "../../../api/companyadmin.api";
+import { useRef, useState } from "react";
+import { companyAdminApi } from "../../../api/companyAdmin.api";
+import { usersApi } from "../../../api/users.api";
 
 export default function CreateCompanyAdminModal({
   isOpen,
@@ -29,66 +39,177 @@ export default function CreateCompanyAdminModal({
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const create = async () => {
-    await companyAdminApi.create(companyId, {
-      fullName,
-      email,
-      password,
-    });
+  // confirm dialogs
+  const [confirmCreateOpen, setConfirmCreateOpen] = useState(false);
+  const cancelRef = useRef<any>(null);
 
-    onCreated();
-    onClose();
-
+  const reset = () => {
     setFullName("");
     setEmail("");
     setPassword("");
+    setPhotoFile(null);
+  };
+
+  const createConfirmed = async () => {
+    try {
+      setLoading(true);
+
+      // 1️⃣ crear admin de empresa
+      const user = await companyAdminApi.create(companyId, {
+        fullName,
+        email,
+        password,
+      });
+
+      // 2️⃣ subir foto SOLO si existe
+      if (photoFile) {
+        await usersApi.uploadPhoto(user.id, photoFile);
+      }
+
+      onCreated();
+      reset();
+      onClose();
+    } finally {
+      setLoading(false);
+      setConfirmCreateOpen(false);
+    }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} isCentered>
-      <ModalOverlay />
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={() => {
+          reset();
+          onClose();
+        }}
+        isCentered
+      >
+        <ModalOverlay />
 
-      <ModalContent>
-        <ModalHeader>Nuevo Administrador</ModalHeader>
-        <ModalCloseButton />
+        <ModalContent>
+          <ModalHeader>Nuevo Administrador</ModalHeader>
+          <ModalCloseButton />
 
-        <ModalBody>
-          <VStack spacing={4}>
-            <div>
-              <FormLabel>Nombre Completo</FormLabel>
-              <Input
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-              />
-            </div>
+          <ModalBody>
+            <VStack spacing={5}>
+              {/* FOTO OPCIONAL */}
+              <div style={{ width: "100%" }}>
+                <FormLabel>Foto de perfil (opcional)</FormLabel>
 
-            <div>
-              <FormLabel>Email</FormLabel>
-              <Input value={email} onChange={(e) => setEmail(e.target.value)} />
-            </div>
+                <Flex align="center" gap={4}>
+                  <Avatar
+                    size="lg"
+                    name={fullName}
+                    src={photoFile ? URL.createObjectURL(photoFile) : undefined}
+                  />
 
-            <div>
-              <FormLabel>Contraseña</FormLabel>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-          </VStack>
-        </ModalBody>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) =>
+                      setPhotoFile(e.target.files?.[0] ?? null)
+                    }
+                  />
+                </Flex>
 
-        <ModalFooter>
-          <Button variant="ghost" mr={3} onClick={onClose}>
-            Cancelar
-          </Button>
+                <Text fontSize="sm" color="gray.500" mt={2}>
+                  PNG, JPG o JPEG. Máx recomendado: 2MB.
+                </Text>
+              </div>
 
-          <Button colorScheme="blue" onClick={create}>
-            Crear
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+              {/* DATOS */}
+              <div style={{ width: "100%" }}>
+                <FormLabel>Nombre Completo</FormLabel>
+                <Input
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                />
+              </div>
+
+              <div style={{ width: "100%" }}>
+                <FormLabel>Email</FormLabel>
+                <Input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+
+              <div style={{ width: "100%" }}>
+                <FormLabel>Contraseña</FormLabel>
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+            </VStack>
+          </ModalBody>
+
+          <ModalFooter>
+            <Button
+              variant="ghost"
+              mr={3}
+              onClick={() => {
+                reset();
+                onClose();
+              }}
+              isDisabled={loading}
+            >
+              Cancelar
+            </Button>
+
+            <Button
+              colorScheme="blue"
+              onClick={() => setConfirmCreateOpen(true)}
+              isLoading={loading}
+            >
+              Crear
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* ==========================
+          CONFIRM CREATE
+      ========================== */}
+      <AlertDialog
+        isOpen={confirmCreateOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={() => setConfirmCreateOpen(false)}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Confirmar creación
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+              ¿Estás seguro de crear este administrador para la empresa?
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+              <Button
+                ref={cancelRef}
+                onClick={() => setConfirmCreateOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                colorScheme="blue"
+                onClick={createConfirmed}
+                ml={3}
+                isLoading={loading}
+              >
+                Crear
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
+    </>
   );
 }

@@ -15,22 +15,28 @@ import {
   Center,
   useDisclosure,
   Input,
+  Select,
+  Icon,
 } from "@chakra-ui/react";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import EditSchoolTutorModal from "./EditSchoolTutorModal";
+import CreateSchoolTutorModal from "./CreateSchoolTutorModal";
 
 import { ChevronDownIcon, ChevronUpIcon } from "@chakra-ui/icons";
 import { schoolTutorsApi } from "../../../api/schooltutor.api";
-import CreateSchoolTutorModal from "./CreateSchoolTutorModal";
+import UserCell from "../../../components/UserCell";
 
 interface Filters {
   search: string;
   status: "all" | "active" | "deleted";
 }
 
-export default function TutorsTab({ schoolId }: any) {
+type SortField = "fullName" | "email" | "phone" | "deletedAt";
+type SortOrder = "asc" | "desc";
+
+export default function TutorsTab({ schoolId }: { schoolId: string }) {
   const [tutors, setTutors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTutor, setSelectedTutor] = useState<any>(null);
@@ -43,62 +49,94 @@ export default function TutorsTab({ schoolId }: any) {
     status: "all",
   });
 
-  const [sortField, setSortField] = useState("fullName");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [sortField, setSortField] = useState<SortField>("fullName");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
   const load = async () => {
     setLoading(true);
-    const data = await schoolTutorsApi.listBySchool(schoolId);
-    setTutors(data);
-    setLoading(false);
+    try {
+      const data = await schoolTutorsApi.listBySchool(schoolId);
+      setTutors(data ?? []);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schoolId]);
 
-  // FILTRO
-  const filtered = tutors.filter((t) => {
-    const matchesSearch =
-      t.fullName.toLowerCase().includes(filters.search.toLowerCase()) ||
-      t.email.toLowerCase().includes(filters.search.toLowerCase());
+  const viewRows = useMemo(() => {
+    const q = filters.search.trim().toLowerCase();
 
-    const matchesStatus =
-      filters.status === "all"
-        ? true
-        : filters.status === "active"
-        ? t.deletedAt === null
-        : t.deletedAt !== null;
+    let arr = [...tutors];
 
-    return matchesSearch && matchesStatus;
-  });
-
-  // SORT
-  const sorted = [...filtered].sort((a, b) => {
-    let A = a[sortField];
-    let B = b[sortField];
-
-    if (typeof A === "string") {
-      A = A.toLowerCase();
-      B = B.toLowerCase();
+    // 🔎 search
+    if (q) {
+      arr = arr.filter((t) => {
+        const fullName = (t.fullName ?? "").toLowerCase();
+        const email = (t.email ?? "").toLowerCase();
+        return fullName.includes(q) || email.includes(q);
+      });
     }
 
-    if (A < B) return sortOrder === "asc" ? -1 : 1;
-    if (A > B) return sortOrder === "asc" ? 1 : -1;
-    return 0;
-  });
+    // ✅ status
+    if (filters.status !== "all") {
+      const active = filters.status === "active";
+      arr = arr.filter((t) => (active ? !t.deletedAt : !!t.deletedAt));
+    }
 
-  const toggleSort = (field: string) => {
+    // ↕️ sort
+    arr.sort((a, b) => {
+      let A: any = a[sortField];
+      let B: any = b[sortField];
+
+      // deletedAt como booleano (activos primero si asc)
+      if (sortField === "deletedAt") {
+        A = A ? 1 : 0;
+        B = B ? 1 : 0;
+      }
+
+      if (typeof A === "string") {
+        A = A.toLowerCase();
+        B = (B ?? "").toString().toLowerCase();
+      } else if (sortField === "phone") {
+        // phone puede ser null
+        A = (A ?? "").toString().toLowerCase();
+        B = (B ?? "").toString().toLowerCase();
+      }
+
+      // nulls al final
+      if (A == null && B == null) return 0;
+      if (A == null) return 1;
+      if (B == null) return -1;
+
+      if (A < B) return sortOrder === "asc" ? -1 : 1;
+      if (A > B) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return arr;
+  }, [tutors, filters, sortField, sortOrder]);
+
+  const toggleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      setSortOrder((p) => (p === "asc" ? "desc" : "asc"));
     } else {
       setSortField(field);
       setSortOrder("asc");
     }
   };
 
-  const sortIcon = (field: string) =>
-    sortField !== field ? null : sortOrder === "asc" ? <ChevronUpIcon /> : <ChevronDownIcon />;
+  const sortIcon = (field: SortField) => {
+    if (sortField !== field) return null;
+    return sortOrder === "asc" ? (
+      <Icon as={ChevronUpIcon} />
+    ) : (
+      <Icon as={ChevronDownIcon} />
+    );
+  };
 
   if (loading)
     return (
@@ -109,7 +147,14 @@ export default function TutorsTab({ schoolId }: any) {
 
   return (
     <Box>
-      <Flex justify="space-between" align="center" mb={5}>
+      {/* HEADER */}
+      <Flex
+        justify="space-between"
+        align={{ base: "flex-start", md: "center" }}
+        mb={5}
+        flexWrap="wrap"
+        gap={3}
+      >
         <Heading size="md">Tutores Escolares</Heading>
 
         <Button colorScheme="blue" onClick={createModal.onOpen}>
@@ -118,31 +163,27 @@ export default function TutorsTab({ schoolId }: any) {
       </Flex>
 
       {/* FILTROS */}
-      <Flex gap={4} mb={5}>
+      <Flex gap={4} mb={5} flexWrap="wrap">
         <Input
           placeholder="Buscar por nombre o correo…"
-          onChange={(e) =>
-            setFilters((p) => ({ ...p, search: e.target.value }))
-          }
+          value={filters.search}
+          onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))}
+          maxW="360px"
         />
 
-        <select
-          style={{
-            padding: "8px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-          }}
-          onChange={(e) =>
-            setFilters((p) => ({ ...p, status: e.target.value as any }))
-          }
+        <Select
+          value={filters.status}
+          onChange={(e) => setFilters((p) => ({ ...p, status: e.target.value as any }))}
+          maxW="220px"
         >
           <option value="all">Todos</option>
           <option value="active">Activos</option>
           <option value="deleted">Eliminados</option>
-        </select>
+        </Select>
       </Flex>
 
-      {sorted.length === 0 && (
+      {/* EMPTY */}
+      {viewRows.length === 0 && (
         <Center
           p={10}
           bg="gray.50"
@@ -150,13 +191,14 @@ export default function TutorsTab({ schoolId }: any) {
           borderWidth="1px"
           borderColor="gray.200"
         >
-          <Text>No hay tutores registrados.</Text>
+          <Text>No hay tutores que coincidan con el filtro.</Text>
         </Center>
       )}
 
-      {sorted.length > 0 && (
-        <Table variant="simple">
-          <Thead>
+      {/* TABLE */}
+      {viewRows.length > 0 && (
+        <Table variant="simple" bg="white" rounded="md" shadow="sm">
+          <Thead bg="gray.50">
             <Tr>
               <Th cursor="pointer" onClick={() => toggleSort("fullName")}>
                 Nombre {sortIcon("fullName")}
@@ -179,11 +221,14 @@ export default function TutorsTab({ schoolId }: any) {
           </Thead>
 
           <Tbody>
-            {sorted.map((t) => (
-              <Tr key={t.id}>
-                <Td>{t.fullName}</Td>
-                <Td>{t.email}</Td>
-                <Td>{t.phone}</Td>
+            {viewRows.map((t: any, idx: number) => (
+              <Tr key={t.id ?? `${t.userId}-${idx}`}>
+                <Td>
+                  <UserCell fullName={t.fullName ?? "—"} photoUrl={t.photoUrl ?? null} />
+                </Td>
+
+                <Td>{t.email ?? "—"}</Td>
+                <Td>{t.phone ?? "—"}</Td>
 
                 <Td>
                   {!t.deletedAt ? (
@@ -194,7 +239,7 @@ export default function TutorsTab({ schoolId }: any) {
                 </Td>
 
                 <Td>
-                  <Flex gap={3} justify="center">
+                  <Flex gap={3} justify="center" flexWrap="wrap">
                     <Button
                       size="sm"
                       colorScheme="yellow"
@@ -214,6 +259,7 @@ export default function TutorsTab({ schoolId }: any) {
                           await schoolTutorsApi.delete(t.id);
                           load();
                         }}
+                        isDisabled={!t.id}
                       >
                         Eliminar
                       </Button>
@@ -225,6 +271,7 @@ export default function TutorsTab({ schoolId }: any) {
                           await schoolTutorsApi.restore(t.id);
                           load();
                         }}
+                        isDisabled={!t.id}
                       >
                         Restaurar
                       </Button>
@@ -237,6 +284,7 @@ export default function TutorsTab({ schoolId }: any) {
         </Table>
       )}
 
+      {/* MODALES */}
       <CreateSchoolTutorModal
         isOpen={createModal.isOpen}
         onClose={createModal.onClose}
@@ -246,7 +294,10 @@ export default function TutorsTab({ schoolId }: any) {
 
       <EditSchoolTutorModal
         isOpen={editModal.isOpen}
-        onClose={editModal.onClose}
+        onClose={() => {
+          editModal.onClose();
+          setSelectedTutor(null);
+        }}
         tutor={selectedTutor}
         onUpdated={load}
       />

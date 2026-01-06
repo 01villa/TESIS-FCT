@@ -16,23 +16,25 @@ import {
   useDisclosure,
   Input,
   Select,
+  Icon,
 } from "@chakra-ui/react";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "@chakra-ui/icons";
 
 import { schoolStudentsApi } from "../../../api/school.students.api";
-import { usersApi } from "../../../api/users.api";
 import { specialtiesApi } from "../../../api/specialties.api";
 
 import CreateSchoolStudentModal from "./CreateSchoolStudentModal";
 import EditSchoolStudentModal from "./EditSchoolStudentModal";
 import StudentDetailModal from "./StudentDetailModal";
 
+import UserCell from "../../../components/UserCell";
+
 interface Filters {
   search: string;
   status: "all" | "active" | "deleted";
-  specialtyId: string; // 👈 nuevo
+  specialtyId: string;
 }
 
 type Specialty = {
@@ -40,7 +42,10 @@ type Specialty = {
   name: string;
 };
 
-export default function StudentsTab({ schoolId }: any) {
+type SortField = "fullName" | "email" | "specialtyName" | "deletedAt";
+type SortOrder = "asc" | "desc";
+
+export default function StudentsTab({ schoolId }: { schoolId: string }) {
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
@@ -55,114 +60,118 @@ export default function StudentsTab({ schoolId }: any) {
   const [filters, setFilters] = useState<Filters>({
     search: "",
     status: "all",
-    specialtyId: "all", // 👈 nuevo
+    specialtyId: "all",
   });
 
-  const [sortField, setSortField] = useState("fullName");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [sortField, setSortField] = useState<SortField>("fullName");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
-  // ======================================================
+  // =========================
   // LOAD SPECIALTIES
-  // ======================================================
+  // =========================
   const loadSpecialties = async () => {
     setLoadingSpecialties(true);
     try {
       const data = await specialtiesApi.list();
-      setSpecialties(data);
+      setSpecialties(data ?? []);
     } finally {
       setLoadingSpecialties(false);
     }
   };
 
-  // ======================================================
-  // LOAD DATA
-  // ======================================================
+  // =========================
+  // LOAD STUDENTS
+  // =========================
   const load = async () => {
     setLoading(true);
-
-    // 1️⃣ Estudiantes de la escuela
-    const data = await schoolStudentsApi.listBySchool(schoolId);
-
-    // 2️⃣ Usuarios (para email)
-    const users = await usersApi.list();
-
-    // 3️⃣ Merge email
-    const merged = data.map((s: any) => {
-      const user = users.find((u: any) => u.id === s.userId);
-      return {
-        ...s,
-        email: user ? user.email : "—",
-      };
-    });
-
-    setStudents(merged);
-    setLoading(false);
+    try {
+      const data = await schoolStudentsApi.listBySchool(schoolId);
+      setStudents(data ?? []);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     load();
     loadSpecialties();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schoolId]);
 
-  // ======================================================
-  // FILTER
-  // ======================================================
-  const filtered = students.filter((s) => {
-    const matchesSearch =
-      (s.fullName ?? "")
-        .toLowerCase()
-        .includes(filters.search.toLowerCase()) ||
-      (s.email ?? "")
-        .toLowerCase()
-        .includes(filters.search.toLowerCase());
+  // =========================
+  // FILTER + SORT
+  // =========================
+  const viewRows = useMemo(() => {
+    const q = filters.search.trim().toLowerCase();
 
-    const matchesStatus =
-      filters.status === "all"
-        ? true
-        : filters.status === "active"
-        ? s.deletedAt === null
-        : s.deletedAt !== null;
+    let arr = [...students];
 
-    const matchesSpecialty =
-      filters.specialtyId === "all"
-        ? true
-        : (s.specialtyId ?? "") === filters.specialtyId;
-
-    return matchesSearch && matchesStatus && matchesSpecialty;
-  });
-
-  // ======================================================
-  // SORT
-  // ======================================================
-  const sorted = [...filtered].sort((a, b) => {
-    let A = a[sortField];
-    let B = b[sortField];
-
-    if (typeof A === "string") {
-      A = A.toLowerCase();
-      B = B.toLowerCase();
+    // 🔎 search
+    if (q) {
+      arr = arr.filter((s) => {
+        const fullName = (s.fullName ?? "").toLowerCase();
+        const email = (s.email ?? "").toLowerCase();
+        return fullName.includes(q) || email.includes(q);
+      });
     }
 
-    if (A < B) return sortOrder === "asc" ? -1 : 1;
-    if (A > B) return sortOrder === "asc" ? 1 : -1;
-    return 0;
-  });
+    // ✅ status
+    if (filters.status !== "all") {
+      const active = filters.status === "active";
+      arr = arr.filter((s) => (active ? !s.deletedAt : !!s.deletedAt));
+    }
 
-  const toggleSort = (field: string) => {
+    // 🎓 specialty
+    if (filters.specialtyId !== "all") {
+      arr = arr.filter((s) => (s.specialtyId ?? "") === filters.specialtyId);
+    }
+
+    // ↕️ sort
+    arr.sort((a, b) => {
+      let A: any = a[sortField];
+      let B: any = b[sortField];
+
+      // deletedAt como booleano (activos primero si asc)
+      if (sortField === "deletedAt") {
+        A = A ? 1 : 0;
+        B = B ? 1 : 0;
+      }
+
+      if (typeof A === "string") {
+        A = A.toLowerCase();
+        B = (B ?? "").toString().toLowerCase();
+      }
+
+      // nulls al final
+      if (A == null && B == null) return 0;
+      if (A == null) return 1;
+      if (B == null) return -1;
+
+      if (A < B) return sortOrder === "asc" ? -1 : 1;
+      if (A > B) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return arr;
+  }, [students, filters, sortField, sortOrder]);
+
+  const toggleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      setSortOrder((p) => (p === "asc" ? "desc" : "asc"));
     } else {
       setSortField(field);
       setSortOrder("asc");
     }
   };
 
-  const sortIcon = (field: string) =>
-    sortField !== field ? null : sortOrder === "asc" ? (
-      <ChevronUpIcon />
+  const sortIcon = (field: SortField) => {
+    if (sortField !== field) return null;
+    return sortOrder === "asc" ? (
+      <Icon as={ChevronUpIcon} />
     ) : (
-      <ChevronDownIcon />
+      <Icon as={ChevronDownIcon} />
     );
+  };
 
   if (loading)
     return (
@@ -174,7 +183,13 @@ export default function StudentsTab({ schoolId }: any) {
   return (
     <Box>
       {/* HEADER */}
-      <Flex justify="space-between" align="center" mb={5}>
+      <Flex
+        justify="space-between"
+        align={{ base: "flex-start", md: "center" }}
+        mb={5}
+        flexWrap="wrap"
+        gap={3}
+      >
         <Heading size="md">Estudiantes de la Escuela</Heading>
 
         <Button colorScheme="blue" onClick={createModal.onOpen}>
@@ -183,37 +198,27 @@ export default function StudentsTab({ schoolId }: any) {
       </Flex>
 
       {/* FILTROS */}
-      <Flex gap={4} mb={5} wrap="wrap">
+      <Flex gap={4} mb={5} flexWrap="wrap">
         <Input
           placeholder="Buscar por nombre o correo…"
           value={filters.search}
-          onChange={(e) =>
-            setFilters((p) => ({ ...p, search: e.target.value }))
-          }
+          onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))}
+          maxW="360px"
         />
 
-        <select
-          style={{
-            padding: "8px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-          }}
+        <Select
           value={filters.status}
-          onChange={(e) =>
-            setFilters((p) => ({ ...p, status: e.target.value as any }))
-          }
+          onChange={(e) => setFilters((p) => ({ ...p, status: e.target.value as any }))}
+          maxW="220px"
         >
           <option value="all">Todos</option>
           <option value="active">Activos</option>
           <option value="deleted">Eliminados</option>
-        </select>
+        </Select>
 
-        {/* 👇 NUEVO: FILTRO POR ESPECIALIDAD */}
         <Select
           value={filters.specialtyId}
-          onChange={(e) =>
-            setFilters((p) => ({ ...p, specialtyId: e.target.value }))
-          }
+          onChange={(e) => setFilters((p) => ({ ...p, specialtyId: e.target.value }))}
           isDisabled={loadingSpecialties}
           maxW="320px"
         >
@@ -226,7 +231,8 @@ export default function StudentsTab({ schoolId }: any) {
         </Select>
       </Flex>
 
-      {sorted.length === 0 && (
+      {/* EMPTY */}
+      {viewRows.length === 0 && (
         <Center
           p={10}
           bg="gray.50"
@@ -234,13 +240,14 @@ export default function StudentsTab({ schoolId }: any) {
           borderWidth="1px"
           borderColor="gray.200"
         >
-          <Text>No hay estudiantes registrados.</Text>
+          <Text>No hay estudiantes que coincidan con el filtro.</Text>
         </Center>
       )}
 
-      {sorted.length > 0 && (
-        <Table variant="simple">
-          <Thead>
+      {/* TABLE */}
+      {viewRows.length > 0 && (
+        <Table variant="simple" bg="white" rounded="md" shadow="sm">
+          <Thead bg="gray.50">
             <Tr>
               <Th cursor="pointer" onClick={() => toggleSort("fullName")}>
                 Nombre {sortIcon("fullName")}
@@ -263,10 +270,14 @@ export default function StudentsTab({ schoolId }: any) {
           </Thead>
 
           <Tbody>
-            {sorted.map((s) => (
-              <Tr key={s.id}>
-                <Td>{s.fullName}</Td>
-                <Td>{s.email}</Td>
+            {viewRows.map((s: any, idx: number) => (
+              <Tr key={s.id ?? `${s.userId}-${idx}`}>
+                <Td>
+                  <UserCell fullName={s.fullName ?? "—"} photoUrl={s.photoUrl ?? null} />
+                </Td>
+
+                <Td>{s.email ?? "—"}</Td>
+
                 <Td>{s.specialtyName ?? "—"}</Td>
 
                 <Td>
@@ -278,7 +289,7 @@ export default function StudentsTab({ schoolId }: any) {
                 </Td>
 
                 <Td>
-                  <Flex gap={3} justify="center">
+                  <Flex gap={3} justify="center" flexWrap="wrap">
                     <Button
                       size="sm"
                       colorScheme="blue"
@@ -309,6 +320,7 @@ export default function StudentsTab({ schoolId }: any) {
                           await schoolStudentsApi.delete(s.id);
                           load();
                         }}
+                        isDisabled={!s.id}
                       >
                         Eliminar
                       </Button>
@@ -320,6 +332,7 @@ export default function StudentsTab({ schoolId }: any) {
                           await schoolStudentsApi.restore(s.id);
                           load();
                         }}
+                        isDisabled={!s.id}
                       >
                         Restaurar
                       </Button>
@@ -342,14 +355,20 @@ export default function StudentsTab({ schoolId }: any) {
 
       <EditSchoolStudentModal
         isOpen={editModal.isOpen}
-        onClose={editModal.onClose}
+        onClose={() => {
+          editModal.onClose();
+          setSelectedStudent(null);
+        }}
         student={selectedStudent}
         onUpdated={load}
       />
 
       <StudentDetailModal
         isOpen={detailModal.isOpen}
-        onClose={detailModal.onClose}
+        onClose={() => {
+          detailModal.onClose();
+          setSelectedStudent(null);
+        }}
         student={selectedStudent}
       />
     </Box>

@@ -62,9 +62,7 @@ export default function SchoolDetails() {
         )}
       </Flex>
 
-      {/* INFO CARD */}
-      <SchoolInfoCard school={school} />
-
+    
       {/* TABS */}
       <Tabs colorScheme="blue" mt={8} isFitted variant="enclosed">
         <TabList>

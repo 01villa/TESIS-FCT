@@ -9,6 +9,7 @@ data class CompanyTutorDTO(
     val userId: UUID,
     val fullName: String,
     val email: String,
+    val photoUrl: String?,
     val phone: String?,
     val active: Boolean,
     val deletedAt: LocalDateTime?,
