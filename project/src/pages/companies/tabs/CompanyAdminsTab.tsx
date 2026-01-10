@@ -12,17 +12,20 @@ import {
   useDisclosure,
   Input,
   Select,
+  TableContainer,
 } from "@chakra-ui/react";
 
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "@chakra-ui/icons";
+
 import CreateCompanyAdminModal from "./CreateCompanyAdminModal";
+import EditCompanyAdminModal from "./EditCompanyAdminModal";
 import { companyAdminApi } from "../../../api/companyAdmin.api";
 import UserCell from "../../../components/UserCell";
 
 type Row = {
-  companyAdminId?: string; // 👈 puede venir undefined si algo falló
-  id?: string;             // 👈 por si backend manda id
+  companyAdminId?: string;
+  id?: string; // por si backend manda id
   userId?: string;
   fullName?: string;
   email?: string;
@@ -32,7 +35,10 @@ type Row = {
 
 export default function CompanyAdminsTab({ companyId }: { companyId: string }) {
   const [admins, setAdmins] = useState<Row[]>([]);
+  const [selectedAdmin, setSelectedAdmin] = useState<Row | null>(null);
+
   const createModal = useDisclosure();
+  const editModal = useDisclosure();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] =
@@ -45,10 +51,9 @@ export default function CompanyAdminsTab({ companyId }: { companyId: string }) {
   const load = async () => {
     const data = await companyAdminApi.listByCompany(companyId);
 
-    // Normaliza a nivel UI por si algo viene diferente (id vs companyAdminId)
     const normalized: Row[] = (data ?? []).map((x: any) => ({
       ...x,
-      companyAdminId: x.companyAdminId ?? x.id, // 👈 fallback
+      companyAdminId: x.companyAdminId ?? x.id, // fallback
     }));
 
     setAdmins(normalized);
@@ -85,6 +90,12 @@ export default function CompanyAdminsTab({ companyId }: { companyId: string }) {
     arr.sort((a, b) => {
       let A: any = a[sortField];
       let B: any = b[sortField];
+
+      // deletedAt: activo primero si asc
+      if (sortField === "deletedAt") {
+        A = A ? 1 : 0;
+        B = B ? 1 : 0;
+      }
 
       if (typeof A === "string") {
         A = A.toLowerCase();
@@ -147,92 +158,125 @@ export default function CompanyAdminsTab({ companyId }: { companyId: string }) {
         </Select>
       </Flex>
 
-      <Table variant="simple" bg="white" rounded="md" shadow="sm">
-        <Thead bg="gray.50">
-          <Tr>
-            <Th cursor="pointer" onClick={() => toggleSort("fullName")}>
-              Nombre {icon("fullName")}
-            </Th>
+      <TableContainer bg="white" rounded="md" shadow="sm">
+        <Table variant="simple">
+          <Thead bg="gray.50">
+            <Tr>
+              <Th cursor="pointer" onClick={() => toggleSort("fullName")}>
+                Nombre {icon("fullName")}
+              </Th>
 
-            <Th cursor="pointer" onClick={() => toggleSort("email")}>
-              Email {icon("email")}
-            </Th>
+              <Th cursor="pointer" onClick={() => toggleSort("email")}>
+                Email {icon("email")}
+              </Th>
 
-            <Th cursor="pointer" onClick={() => toggleSort("deletedAt")}>
-              Estado {icon("deletedAt")}
-            </Th>
+              <Th cursor="pointer" onClick={() => toggleSort("deletedAt")}>
+                Estado {icon("deletedAt")}
+              </Th>
 
-            <Th textAlign="center">Acciones</Th>
-          </Tr>
-        </Thead>
+              <Th textAlign="center">Acciones</Th>
+            </Tr>
+          </Thead>
 
-        <Tbody>
-          {sorted.map((a, idx) => {
-            // ✅ Key siempre único (no warning)
-            const rowKey =
-              a.companyAdminId ?? a.userId ?? a.email ?? `row-${idx}`;
+          <Tbody>
+            {sorted.map((a, idx) => {
+              const rowKey =
+                a.companyAdminId ?? a.userId ?? a.email ?? `row-${idx}`;
 
-            return (
-              <Tr key={rowKey}>
-                <Td>
-                  <UserCell
-                    fullName={a.fullName ?? "—"}
-                    photoUrl={a.photoUrl ?? null}
-                  />
-                </Td>
+              return (
+                <Tr key={rowKey}>
+                  <Td>
+                    <UserCell
+                      fullName={a.fullName ?? "—"}
+                      photoUrl={a.photoUrl ?? null}
+                    />
+                  </Td>
 
-                <Td>{a.email ?? "—"}</Td>
+                  <Td>{a.email ?? "—"}</Td>
 
-                <Td>
-                  {a.deletedAt ? (
-                    <Badge colorScheme="red">Inactivo</Badge>
-                  ) : (
-                    <Badge colorScheme="green">Activo</Badge>
-                  )}
-                </Td>
-
-                <Td>
-                  <Flex gap={3} justify="center">
-                    {!a.deletedAt ? (
-                      <Button
-                        size="sm"
-                        colorScheme="red"
-                        onClick={async () => {
-                          if (!a.companyAdminId) return; // evita llamada mala
-                          await companyAdminApi.delete(a.companyAdminId);
-                          load();
-                        }}
-                        isDisabled={!a.companyAdminId}
-                      >
-                        Eliminar
-                      </Button>
+                  <Td>
+                    {a.deletedAt ? (
+                      <Badge colorScheme="red">Inactivo</Badge>
                     ) : (
+                      <Badge colorScheme="green">Activo</Badge>
+                    )}
+                  </Td>
+
+                  <Td textAlign="center">
+                    <Flex gap={3} justify="center" flexWrap="wrap">
+                      {/* ✅ EDITAR */}
                       <Button
                         size="sm"
-                        colorScheme="green"
-                        onClick={async () => {
-                          if (!a.companyAdminId) return;
-                          await companyAdminApi.restore(a.companyAdminId);
-                          load();
+                        colorScheme="yellow"
+                        onClick={() => {
+                          setSelectedAdmin(a);
+                          editModal.onOpen();
                         }}
                         isDisabled={!a.companyAdminId}
                       >
-                        Restaurar
+                        Editar
                       </Button>
-                    )}
-                  </Flex>
-                </Td>
-              </Tr>
-            );
-          })}
-        </Tbody>
-      </Table>
 
+                      {/* DELETE / RESTORE */}
+                      {!a.deletedAt ? (
+                        <Button
+                          size="sm"
+                          colorScheme="red"
+                          onClick={async () => {
+                            if (!a.companyAdminId) return;
+                            await companyAdminApi.delete(a.companyAdminId);
+                            load();
+                          }}
+                          isDisabled={!a.companyAdminId}
+                        >
+                          Eliminar
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          colorScheme="green"
+                          onClick={async () => {
+                            if (!a.companyAdminId) return;
+                            await companyAdminApi.restore(a.companyAdminId);
+                            load();
+                          }}
+                          isDisabled={!a.companyAdminId}
+                        >
+                          Restaurar
+                        </Button>
+                      )}
+                    </Flex>
+                  </Td>
+                </Tr>
+              );
+            })}
+          </Tbody>
+        </Table>
+      </TableContainer>
+
+      {/* MODALES */}
       <CreateCompanyAdminModal
         isOpen={createModal.isOpen}
         onClose={createModal.onClose}
         companyId={companyId}
         onCreated={load}
+      />
+
+      <EditCompanyAdminModal
+        isOpen={editModal.isOpen}
+        onClose={() => {
+          editModal.onClose();
+          setSelectedAdmin(null);
+        }}
+        admin={{
+          // Adaptación mínima: tu modal espera id y userId
+          id: selectedAdmin?.companyAdminId,
+          userId: selectedAdmin?.userId,
+          fullName: selectedAdmin?.fullName,
+          email: selectedAdmin?.email,
+          photoUrl: selectedAdmin?.photoUrl,
+        }}
+        onUpdated={load}
       />
     </Box>
   );

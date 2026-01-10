@@ -28,6 +28,8 @@ class CompanyService(
         val company = Company(
             name = dto.name,
             address = dto.address,
+            logoUrl = dto.logoUrl,
+            publicUrl = dto.publicUrl,
             active = true,
             deletedAt = null
         )

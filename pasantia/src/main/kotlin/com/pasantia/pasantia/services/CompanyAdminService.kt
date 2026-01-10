@@ -1,5 +1,6 @@
 package com.pasantia.pasantia.services
 
+import com.pasantia.pasantia.dto.UpdateUserBasicDTO
 import com.pasantia.pasantia.dto.admin.CreateAdminForEntityDTO
 import com.pasantia.pasantia.dto.company.companyadmin.CompanyAdminDTO
 import com.pasantia.pasantia.entities.CompanyAdmin
@@ -102,6 +103,38 @@ class CompanyAdminService(
         admin.deletedAt = LocalDateTime.now()
     }
 
+
+    @Transactional
+    fun update(id: UUID, dto: UpdateUserBasicDTO): CompanyAdminDTO {
+
+        val admin = companyAdminRepository.findByIdAndActiveTrue(id)
+            ?: throw IllegalArgumentException("CompanyAdmin not found or inactive")
+
+        val user = admin.user
+
+        // Email con validación
+        val newEmail = dto.email.trim().lowercase()
+        if (newEmail != user.email.lowercase()) {
+            val existing = userRepository.findByEmail(newEmail)
+            if (existing != null && existing.id != user.id) {
+                throw IllegalArgumentException("Email already exists: $newEmail")
+            }
+            user.email = newEmail
+        }
+
+        // Nombre
+        user.fullName = dto.fullName.trim()
+
+        // Password opcional
+        val newPass = dto.password?.trim()
+        if (!newPass.isNullOrBlank()) {
+            user.passwordHash = passwordEncoder.encode(newPass)
+        }
+
+        userRepository.save(user)
+
+        return CompanyAdminMapper.toDTO(admin)
+    }
     // ============================================================
     // RESTORE
     // ============================================================
@@ -115,4 +148,5 @@ class CompanyAdminService(
         admin.active = true
         admin.deletedAt = null
     }
+
 }

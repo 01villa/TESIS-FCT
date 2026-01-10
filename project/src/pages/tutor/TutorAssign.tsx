@@ -342,9 +342,7 @@ export default function TutorAssign() {
 
                     {selectedVacancy.requirements && (
                       <Box>
-                        <Text fontWeight="bold" fontSize="sm" mb={1}>
-                          Requisitos
-                        </Text>
+                       
                         <Text fontSize="sm" color={subtleText} whiteSpace="pre-wrap">
                           {selectedVacancy.requirements}
                         </Text>

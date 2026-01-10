@@ -17,6 +17,9 @@ import {
   TabPanel,
   Badge,
   Skeleton,
+  HStack,
+  Link,
+  VStack,
 } from "@chakra-ui/react";
 
 import { useEffect, useMemo, useState } from "react";
@@ -31,6 +34,8 @@ import {
 import Navbar from "../components/Navbar";
 import { partnersApi } from "../api/partners.api";
 import { API_URL } from "../config/api";
+import MainSponsorSection from "../components/MainSponsorSection";
+import { ExternalLinkIcon } from "@chakra-ui/icons";
 
 const MotionBox = motion(Box);
 const MotionFlex = motion(Flex);
@@ -47,6 +52,7 @@ type Partner = {
   type: PartnerType;
   logoUrl?: string | null;
   photoUrl?: string | null;
+  publicUrl?: string | null;
 };
 
 /* ============================
@@ -59,6 +65,14 @@ function normalizeImgUrl(raw?: string | null) {
   if (/^https?:\/\//i.test(raw)) return raw;
   if (raw.startsWith("/")) return `${API_URL}${raw}`;
   return `${API_URL}/${raw}`;
+}
+
+function normalizePublicUrl(raw?: string | null) {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
 }
 
 /* ============================
@@ -101,6 +115,7 @@ export default function LandingPage() {
 
         <BenefitsSection />
         <RolesSection />
+        <MainSponsorSection />
         <PartnersTabsSection />
         <CTASection />
 
@@ -221,10 +236,16 @@ function RolesSection() {
 ============================ */
 
 function PartnersTabsSection() {
+  // ✅ Hooks SOLO aquí arriba, nunca dentro de map/if
   const bg = useColorModeValue("gray.50", "gray.800");
   const cardBg = useColorModeValue("white", "gray.700");
   const muted = useColorModeValue("gray.600", "gray.300");
-  const imgBg = useColorModeValue("gray.50", "gray.600");
+
+  const borderColor = useColorModeValue("gray.200", "whiteAlpha.200");
+  const logoBg = useColorModeValue("gray.50", "whiteAlpha.100");
+  const logoBorder = useColorModeValue("gray.200", "whiteAlpha.200");
+
+  const tabsBg = useColorModeValue("white", "gray.700");
 
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
@@ -234,6 +255,7 @@ function PartnersTabsSection() {
     (async () => {
       try {
         setLoading(true);
+        setError("");
         const data = await partnersApi.getAll();
         setPartners(Array.isArray(data) ? data : []);
       } catch {
@@ -248,6 +270,7 @@ function PartnersTabsSection() {
     () => partners.filter((p) => p.type === "SCHOOL"),
     [partners]
   );
+
   const companies = useMemo(
     () => partners.filter((p) => p.type === "COMPANY"),
     [partners]
@@ -256,64 +279,111 @@ function PartnersTabsSection() {
   const renderGrid = (list: Partner[]) => {
     if (loading) {
       return (
-        <SimpleGrid columns={{ base: 2, md: 4 }} spacing={6}>
+        <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={6}>
           {Array.from({ length: 8 }).map((_, i) => (
-            <Box key={i} bg={cardBg} p={6} rounded="xl">
-              <Skeleton height="70px" mb={4} />
-              <Skeleton height="16px" mb={2} />
+            <Box
+              key={i}
+              bg={cardBg}
+              p={6}
+              rounded="2xl"
+              borderWidth="1px"
+              borderColor={borderColor}
+            >
+              <Skeleton height="96px" mb={5} rounded="xl" />
+              <Skeleton height="16px" mb={3} />
+              <HStack justify="center" mt={4} spacing={3}>
+                <Skeleton height="22px" width="70px" rounded="md" />
+                <Skeleton height="32px" width="90px" rounded="md" />
+              </HStack>
             </Box>
           ))}
         </SimpleGrid>
       );
     }
 
-    if (error) {
-      return <Text color="red.400">{error}</Text>;
-    }
+    if (error) return <Text color="red.400">{error}</Text>;
 
     return (
-      <SimpleGrid columns={{ base: 2, md: 4 }} spacing={6}>
+      <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} spacing={6}>
         {list.map((p) => {
           const imgSrc =
-            normalizeImgUrl(p.logoUrl ?? p.photoUrl) ??
-            "/logos/default.png";
+            normalizeImgUrl(p.logoUrl ?? p.photoUrl) ?? "/logos/default.png";
+
+          const link = normalizePublicUrl(p.publicUrl);
 
           return (
             <MotionBox
               key={`${p.type}-${p.id}`}
               bg={cardBg}
               p={6}
-              rounded="xl"
-              textAlign="center"
-              whileHover={{ y: -4 }}
+              rounded="2xl"
+              borderWidth="1px"
+              borderColor={borderColor}
+              whileHover={{ y: -6 }}
+              transition="all .2s ease"
+              _hover={{ shadow: "xl" }}
             >
-              <Flex
-                h="70px"
-                mb={4}
-                align="center"
-                justify="center"
-                bg={imgBg}
-                rounded="md"
-              >
-                <Box
-                  as="img"
-                  src={imgSrc}
-                  alt={p.name}
-                  maxH="60px"
-                  onError={(e: any) =>
-                    (e.currentTarget.src = "/logos/default.png")
-                  }
-                />
-              </Flex>
+              <VStack spacing={4} align="stretch">
+                {/* LOGO */}
+                <Flex
+                  h="96px"
+                  align="center"
+                  justify="center"
+                  bg={logoBg}
+                  borderWidth="1px"
+                  borderColor={logoBorder}
+                  rounded="xl"
+                  overflow="hidden"
+                >
+                  <Box
+                    as="img"
+                    src={imgSrc}
+                    alt={p.name}
+                    maxH="70px"
+                    maxW="90%"
+                    objectFit="contain"
+                    onError={(e: any) =>
+                      (e.currentTarget.src = "/logos/default.png")
+                    }
+                  />
+                </Flex>
 
-              <Text fontWeight="bold">{p.name}</Text>
+                {/* NOMBRE */}
+                <Text fontWeight="800" textAlign="center" noOfLines={2}>
+                  {p.name}
+                </Text>
 
-              <Badge
-                mt={2}
-                colorScheme={p.type === "SCHOOL" ? "blue" : "teal"}
-              >
-                {p.type === "SCHOOL" ? "Colegio" : "Empresa"}
-              </Badge>
+                {/* BADGE + BOTON */}
+                <HStack justify="center" spacing={3} pt={1}>
+                  <Badge
+                    px={2}
+                    py={1}
+                    rounded="md"
+                    fontSize="xs"
+                    colorScheme={p.type === "SCHOOL" ? "blue" : "teal"}
+                  >
+                    {p.type === "SCHOOL" ? "COLEGIO" : "EMPRESA"}
+                  </Badge>
+
+                  {link ? (
+                    <Button
+                      as={Link}
+                      href={link}
+                      isExternal
+                      size="sm"
+                      rounded="md"
+                      variant="outline"
+                      rightIcon={<ExternalLinkIcon />}
+                    >
+                      Visitar
+                    </Button>
+                  ) : (
+                    <Button size="sm" rounded="md" variant="ghost" isDisabled>
+                      Sin sitio
+                    </Button>
+                  )}
+                </HStack>
+              </VStack>
             </MotionBox>
           );
         })}
@@ -333,10 +403,16 @@ function PartnersTabsSection() {
         </Text>
 
         <Tabs isFitted variant="soft-rounded" colorScheme="blue">
-          <TabList mb={8}>
-            <Tab>Todos</Tab>
-            <Tab>Colegios</Tab>
-            <Tab>Empresas</Tab>
+          <TabList
+            mb={8}
+            bg={tabsBg}
+            p={2}
+            rounded="2xl"
+            shadow="sm"
+          >
+            <Tab rounded="xl">Todos</Tab>
+            <Tab rounded="xl">Colegios</Tab>
+            <Tab rounded="xl">Empresas</Tab>
           </TabList>
 
           <TabPanels>

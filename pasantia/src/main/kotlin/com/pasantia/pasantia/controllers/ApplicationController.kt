@@ -1,11 +1,13 @@
 package com.pasantia.pasantia.controllers
 
 import com.pasantia.pasantia.dto.application.CreateAssignmentDTO
+import com.pasantia.pasantia.dto.application.FinishApplicationDTO
+import com.pasantia.pasantia.dto.application.GradeApplicationDTO
 import com.pasantia.pasantia.services.ApplicationService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.security.Principal
-import java.util.*
+import java.util.UUID
 
 @RestController
 @RequestMapping("/applications")
@@ -61,13 +63,9 @@ class ApplicationController(
         principal: Principal,
         @PathVariable id: UUID,
         @RequestBody(required = false) body: Map<String, String>?
-    ): ResponseEntity<Any> {
-
-        val notes = body?.get("notes")
-        val result = applicationService.rejectByCompanyTutor(id, principal.name, notes)
-
-        return ResponseEntity.ok(result)
-    }
+    ) = ResponseEntity.ok(
+        applicationService.rejectByCompanyTutor(id, principal.name, body?.get("notes"))
+    )
 
     // ======================================================
     // 6) Estudiante → ver sus asignaciones
@@ -80,7 +78,36 @@ class ApplicationController(
     )
 
     // ======================================================
-    // 7) Soft delete (ADMIN / cualquier rol autorizado)
+// 7) Tutor empresa → finalizar pasantía
+// ======================================================
+    @PatchMapping("/{id}/finish")
+    fun finish(
+        principal: Principal,
+        @PathVariable id: UUID,
+        @RequestBody(required = false) dto: FinishApplicationDTO?
+    ) = ResponseEntity.ok(
+        applicationService.finishByCompanyTutor(
+            id,
+            principal.name,
+            dto ?: FinishApplicationDTO()
+        )
+    )
+
+
+    // ======================================================
+    // 8) Tutor escolar → calificar pasantía (solo si está FINISHED)
+    // ======================================================
+    @PatchMapping("/{id}/grade")
+    fun grade(
+        principal: Principal,
+        @PathVariable id: UUID,
+        @RequestBody dto: GradeApplicationDTO
+    ) = ResponseEntity.ok(
+        applicationService.gradeBySchoolTutor(id, principal.name, dto)
+    )
+
+    // ======================================================
+    // 9) Soft delete (ADMIN / cualquier rol autorizado)
     // ======================================================
     @DeleteMapping("/{id}")
     fun softDelete(@PathVariable id: UUID): ResponseEntity<Void> {
@@ -89,7 +116,7 @@ class ApplicationController(
     }
 
     // ======================================================
-    // 8) Restore (ADMIN)
+    // 10) Restore (ADMIN)
     // ======================================================
     @PatchMapping("/{id}/restore")
     fun restore(@PathVariable id: UUID): ResponseEntity<Void> {

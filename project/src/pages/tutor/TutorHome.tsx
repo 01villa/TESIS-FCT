@@ -24,38 +24,45 @@ export default function TutorHome() {
       try {
         const schoolId = user.schoolId;
 
-        // 1️⃣ Estudiantes de su escuela
+        // 1) Estudiantes de su escuela
         const studentsRes = await axios.get(`/admin/students/school/${schoolId}`);
 
-        // 2️⃣ Vacantes disponibles (globales)
+        // 2) Vacantes disponibles
         const vacanciesRes = await axios.get("/vacancies");
 
-        // 3️⃣ Asignaciones del tutor
+        // 3) Asignaciones del tutor escolar
         const assignRes = await axios.get("/applications/school-tutor");
+        const assignments = Array.isArray(assignRes.data) ? assignRes.data : [];
 
-        const assignments = assignRes.data;
+        const count = (key: string) =>
+          assignments.filter((a: any) => String(a?.status ?? "").toUpperCase() === key).length;
 
-        // Filtrar por estado
-        const pending = assignments.filter((a: any) => a.status === "PENDING").length;
-        const approved = assignments.filter((a: any) => a.status === "APPROVED").length;
-        const rejected = assignments.filter((a: any) => a.status === "REJECTED").length;
+        const assigned = count("ASSIGNED");
+        const approved = count("APPROVED_BY_COMPANY");
+        const rejected = count("REJECTED_BY_COMPANY");
+        const finished = count("FINISHED");
+        const graded = assignments.filter(
+          (a: any) => String(a?.status ?? "").toUpperCase() === "GRADED" || a?.finalGrade != null
+        ).length;
 
         setStats({
-          students: studentsRes.data.length,
-          vacancies: vacanciesRes.data.length,
+          students: Array.isArray(studentsRes.data) ? studentsRes.data.length : 0,
+          vacancies: Array.isArray(vacanciesRes.data) ? vacanciesRes.data.length : 0,
           assignments: assignments.length,
-          pending,
+
+          assigned,
           approved,
           rejected,
+          finished,
+          graded,
         });
-
       } catch (e) {
         console.error(e);
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [user.schoolId]);
 
   if (loading)
     return (
@@ -75,9 +82,13 @@ export default function TutorHome() {
         <StatBox label="Estudiantes de mi escuela" value={stats.students} />
         <StatBox label="Vacantes disponibles" value={stats.vacancies} />
         <StatBox label="Asignaciones totales" value={stats.assignments} />
-        <StatBox label="Pendientes" value={stats.pending} />
-        <StatBox label="Aprobadas" value={stats.approved} />
-        <StatBox label="Rechazadas" value={stats.rejected} />
+
+        <StatBox label="Asignadas (pendientes de empresa)" value={stats.assigned} />
+        <StatBox label="Aprobadas por empresa" value={stats.approved} />
+        <StatBox label="Rechazadas por empresa" value={stats.rejected} />
+
+        <StatBox label="Finalizadas (empresa)" value={stats.finished} />
+        <StatBox label="Calificadas (escuela)" value={stats.graded} />
       </SimpleGrid>
     </Box>
   );

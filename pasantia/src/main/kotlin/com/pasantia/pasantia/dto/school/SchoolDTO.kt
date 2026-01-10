@@ -2,7 +2,6 @@ package com.pasantia.pasantia.dto.school
 
 import java.time.LocalDateTime
 import java.util.UUID
-
 data class SchoolDTO(
     val id: UUID,
     val name: String,
@@ -11,6 +10,7 @@ data class SchoolDTO(
     val deletedAt: LocalDateTime?,
     val createdAt: LocalDateTime?,
     val updatedAt: LocalDateTime?,
-    val photoUrl: String?
-
+    val photoUrl: String?,
+    val publicUrl: String? = null
 )
+

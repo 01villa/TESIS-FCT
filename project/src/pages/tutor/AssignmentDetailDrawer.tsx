@@ -25,9 +25,7 @@ import { vacanciesApi } from "../../api/vacancies.api"; // ajusta ruta si tu est
 function formatDate(value: any) {
   if (!value) return "—";
 
-  // LocalDate desde backend suele venir "YYYY-MM-DD"
-  // New Date("2026-01-05") funciona, pero puede variar por timezone.
-  // Por eso: formateo manual si viene string
+  // LocalDate "YYYY-MM-DD"
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
     const [y, m, d] = value.split("-").map(Number);
     const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
@@ -45,15 +43,21 @@ function formatDate(value: any) {
     year: "numeric",
     month: "short",
     day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(d);
 }
 
 function normalizeStatus(status: any) {
-  const n = Number(status);
-  if (n === 1) return { label: "PENDIENTE", scheme: "yellow" as const };
-  if (n === 2) return { label: "ACEPTADA", scheme: "green" as const };
-  if (n === 3) return { label: "RECHAZADA", scheme: "red" as const };
-  return { label: "DESCONOCIDO", scheme: "gray" as const };
+  const s = String(status ?? "").toUpperCase();
+
+  if (s === "ASSIGNED") return { label: "PENDIENTE", scheme: "yellow" as const };
+  if (s === "APPROVED_BY_COMPANY") return { label: "APROBADA", scheme: "green" as const };
+  if (s === "REJECTED_BY_COMPANY") return { label: "RECHAZADA", scheme: "red" as const };
+  if (s === "FINISHED") return { label: "FINALIZADA", scheme: "blue" as const };
+  if (s === "GRADED") return { label: "CALIFICADA", scheme: "purple" as const };
+
+  return { label: s ? s : "DESCONOCIDO", scheme: "gray" as const };
 }
 
 export default function AssignmentDetailDrawer({
@@ -65,7 +69,6 @@ export default function AssignmentDetailDrawer({
   onClose: () => void;
   assignment: any;
 }) {
-  // Chakra hooks arriba (sin condicionales)
   const cardBg = useColorModeValue("gray.50", "gray.800");
   const border = useColorModeValue("gray.200", "gray.700");
   const subtleText = useColorModeValue("gray.600", "gray.300");
@@ -76,14 +79,11 @@ export default function AssignmentDetailDrawer({
   const status = useMemo(() => normalizeStatus(assignment?.status), [assignment?.status]);
   const vacancyId = useMemo(() => assignment?.vacancyId ?? null, [assignment?.vacancyId]);
 
-  // 🔥 Cargar detalles de vacante al abrir
   useEffect(() => {
     const run = async () => {
       if (!isOpen) return;
 
-      // Reset para que no muestre datos viejos cuando cambias de fila
       setVacancy(null);
-
       if (!vacancyId) return;
 
       setLoadingVacancy(true);
@@ -100,19 +100,24 @@ export default function AssignmentDetailDrawer({
     run();
   }, [isOpen, vacancyId]);
 
-  // ✅ Datos base: siempre existen en ApplicationDTO
+  // Base
   const title = assignment?.vacancyTitle ?? "—";
   const companyName = assignment?.companyName ?? "—";
   const studentName = assignment?.studentFullName ?? "—";
 
-  // ✅ Periodo de pasantía: viene en ApplicationDTO (NO appliedAt)
   const startDate = assignment?.vacancyStartDate ?? null;
   const endDate = assignment?.vacancyEndDate ?? null;
 
-  // ✅ Detalles: se completan desde GET /vacancies/{id}
+  // Vacante
   const specialtyName = vacancy?.specialtyName ?? "—";
   const capacity = vacancy?.capacity ?? "—";
   const description = vacancy?.description ?? "—";
+
+  // Nuevos campos (pueden venir null)
+  const finalGrade = assignment?.finalGrade ?? null;
+  const finalFeedback = assignment?.finalFeedback ?? null;
+  const finishedAt = assignment?.finishedAt ?? null;
+  const gradedAt = assignment?.gradedAt ?? null;
 
   return (
     <Drawer isOpen={isOpen} placement="right" onClose={onClose} size="md">
@@ -207,13 +212,7 @@ export default function AssignmentDetailDrawer({
               </HStack>
 
               {/* Periodo de pasantía */}
-              <Box
-                bg={cardBg}
-                borderWidth="1px"
-                borderColor={border}
-                borderRadius="lg"
-                p={4}
-              >
+              <Box bg={cardBg} borderWidth="1px" borderColor={border} borderRadius="lg" p={4}>
                 <Text fontSize="xs" color={subtleText} fontWeight="semibold">
                   PERIODO DE PASANTÍA
                 </Text>
@@ -221,6 +220,31 @@ export default function AssignmentDetailDrawer({
                   {formatDate(startDate)} – {formatDate(endDate)}
                 </Text>
               </Box>
+
+              {/* Estado de cierre / calificación */}
+              {(finishedAt || gradedAt || finalGrade != null) && (
+                <Box bg={cardBg} borderWidth="1px" borderColor={border} borderRadius="lg" p={4}>
+                  <Text fontSize="xs" color={subtleText} fontWeight="semibold">
+                    CIERRE / CALIFICACIÓN
+                  </Text>
+
+                  <HStack mt={2} spacing={3} flexWrap="wrap">
+                    <Text fontSize="sm" color={subtleText}>
+                      Finalizada: <b>{formatDate(finishedAt)}</b>
+                    </Text>
+                    <Text fontSize="sm" color={subtleText}>
+                      Calificada: <b>{formatDate(gradedAt)}</b>
+                    </Text>
+                  </HStack>
+
+                  <HStack mt={2} spacing={3} flexWrap="wrap">
+                    <Text fontSize="sm" color={subtleText}>
+                      Nota final:{" "}
+                      <b>{finalGrade != null ? Number(finalGrade).toFixed(2) : "—"}</b>
+                    </Text>
+                  </HStack>
+                </Box>
+              )}
 
               {/* Descripción */}
               <Box>
@@ -234,9 +258,7 @@ export default function AssignmentDetailDrawer({
                 </Box>
               </Box>
 
-             
-
-              {/* Notas (si existen) */}
+              {/* Notas (generales) */}
               {assignment?.notes && (
                 <Box>
                   <Text fontSize="sm" fontWeight="bold" mb={2}>
@@ -245,6 +267,20 @@ export default function AssignmentDetailDrawer({
                   <Box bg={cardBg} borderWidth="1px" borderColor={border} borderRadius="lg" p={4}>
                     <Text fontSize="sm" color={subtleText} whiteSpace="pre-wrap">
                       {assignment.notes}
+                    </Text>
+                  </Box>
+                </Box>
+              )}
+
+              {/* Feedback final */}
+              {finalFeedback && (
+                <Box>
+                  <Text fontSize="sm" fontWeight="bold" mb={2}>
+                    Feedback final
+                  </Text>
+                  <Box bg={cardBg} borderWidth="1px" borderColor={border} borderRadius="lg" p={4}>
+                    <Text fontSize="sm" color={subtleText} whiteSpace="pre-wrap">
+                      {finalFeedback}
                     </Text>
                   </Box>
                 </Box>

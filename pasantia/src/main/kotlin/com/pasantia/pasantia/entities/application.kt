@@ -5,6 +5,7 @@ import jakarta.persistence.*
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.LastModifiedDate
 import org.springframework.data.jpa.domain.support.AuditingEntityListener
+import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -36,11 +37,37 @@ data class Application(
     // 1 = asignado por tutor escolar / pendiente empresa
     // 2 = aprobado por tutor de empresa
     // 3 = rechazado por tutor de empresa
+    // 4 = finalizado por tutor escolar
+    // 5 = calificado por tutor escolar
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    var status: Short = 1,
+    var status: ApplicationStatus = ApplicationStatus.ASSIGNED,
 
     @Column(columnDefinition = "TEXT")
     var notes: String? = null,
+
+    // ===========================
+    // CALIFICACIÓN FINAL
+    // ===========================
+    // Nota final (ej: 0.00 - 10.00)
+    @Column(name = "final_grade", precision = 5, scale = 2)
+    var finalGrade: BigDecimal? = null,
+
+    // Observación final / retroalimentación
+    @Column(name = "final_feedback", columnDefinition = "TEXT")
+    var finalFeedback: String? = null,
+
+    // Cuándo se marcó como finalizada la pasantía
+    @Column(name = "finished_at")
+    var finishedAt: LocalDateTime? = null,
+
+    // Cuándo se registró la calificación
+    @Column(name = "graded_at")
+    var gradedAt: LocalDateTime? = null,
+
+    // Quién calificó (id del tutor escolar normalmente)
+    @Column(name = "graded_by")
+    var gradedBy: UUID? = null,
 
     // ---------- Soft delete ----------
     @Column(nullable = false)

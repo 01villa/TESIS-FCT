@@ -10,13 +10,16 @@ class PartnerPublicService(
     private val schoolRepository: SchoolRepository,
     private val companyRepository: CompanyRepository
 ) {
+
     fun getAllActivePartners(): List<PartnerPublicDTO> {
+
         val schools = schoolRepository.findAllByActiveTrue().map {
             PartnerPublicDTO(
                 id = it.id,
                 name = it.name,
                 type = "SCHOOL",
-                logoUrl = it.logoUrl
+                logoUrl = it.logoUrl,
+                publicUrl = it.publicUrl      // ✅ NUEVO
             )
         }
 
@@ -25,7 +28,8 @@ class PartnerPublicService(
                 id = it.id,
                 name = it.name,
                 type = "COMPANY",
-                logoUrl = it.logoUrl
+                logoUrl = it.logoUrl,
+                publicUrl = it.publicUrl      // ✅ NUEVO
             )
         }
 

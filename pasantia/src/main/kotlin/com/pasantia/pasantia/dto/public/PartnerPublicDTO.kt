@@ -7,5 +7,6 @@ data class PartnerPublicDTO(
     val id: UUID,
     val name: String,
     val type: String, // SCHOOL | COMPANY
-    val logoUrl: String?
+    val logoUrl: String?,
+    val publicUrl: String?,
 )

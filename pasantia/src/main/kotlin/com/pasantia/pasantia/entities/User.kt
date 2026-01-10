@@ -18,7 +18,7 @@ open class User(
     val id: UUID? = null,
 
     @Column(nullable = false, unique = true, length = 150)
-    val email: String,
+    var email: String,
 
     @Column(name = "password_hash", nullable = false, columnDefinition = "TEXT")
     var passwordHash: String,

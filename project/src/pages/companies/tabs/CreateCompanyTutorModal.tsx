@@ -20,9 +20,15 @@ import {
   AlertDialogOverlay,
 } from "@chakra-ui/react";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { companyTutorApi } from "../../../api/companyTutors.api";
 import { usersApi } from "../../../api/users.api";
+
+type CreateTutorForm = {
+  fullName: string;
+  email: string;
+  password: string;
+};
 
 export default function CreateCompanyTutorModal({
   isOpen,
@@ -35,7 +41,7 @@ export default function CreateCompanyTutorModal({
   companyId: string;
   onCreated: () => void;
 }) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<CreateTutorForm>({
     fullName: "",
     email: "",
     password: "",
@@ -44,9 +50,17 @@ export default function CreateCompanyTutorModal({
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // confirm dialog
   const [confirmOpen, setConfirmOpen] = useState(false);
   const cancelRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setForm({ fullName: "", email: "", password: "" });
+      setPhotoFile(null);
+      setLoading(false);
+      setConfirmOpen(false);
+    }
+  }, [isOpen]);
 
   const reset = () => {
     setForm({ fullName: "", email: "", password: "" });
@@ -57,12 +71,23 @@ export default function CreateCompanyTutorModal({
     try {
       setLoading(true);
 
-      // 1️⃣ crear tutor (crea también el USER)
-      const createdUser = await companyTutorApi.create(companyId, form);
+      // 1) crear tutor (crea también el USER)
+      // Debe retornar algo como { id: tutorId, userId: "...", ... }
+      const created = await companyTutorApi.create(companyId, {
+        fullName: form.fullName.trim(),
+        email: form.email.trim(),
+        password: form.password,
+      });
 
-      // 2️⃣ subir foto si existe (usando USERS API)
-      if (photoFile && createdUser?.id) {
-        await usersApi.uploadPhoto(createdUser.id, photoFile);
+      // 2) subir foto si existe (al USER)
+      if (photoFile) {
+        const userId = created?.userId; // 👈 CLAVE
+        if (!userId) {
+          throw new Error(
+            "El backend no devolvió userId. Agrega userId al DTO del tutor para poder subir la foto."
+          );
+        }
+        await usersApi.uploadPhoto(userId, photoFile);
       }
 
       onCreated();
@@ -73,6 +98,11 @@ export default function CreateCompanyTutorModal({
       setConfirmOpen(false);
     }
   };
+
+  const canSubmit =
+    form.fullName.trim() && form.email.trim() && form.password.trim();
+
+  const previewSrc = photoFile ? URL.createObjectURL(photoFile) : undefined;
 
   return (
     <>
@@ -94,23 +124,17 @@ export default function CreateCompanyTutorModal({
               <FormLabel>Foto de perfil (opcional)</FormLabel>
 
               <Flex align="center" gap={4}>
-                <Avatar
-                  size="lg"
-                  name={form.fullName}
-                  src={photoFile ? URL.createObjectURL(photoFile) : undefined}
-                />
+                <Avatar size="lg" name={form.fullName} src={previewSrc} />
 
                 <Input
                   type="file"
                   accept="image/*"
-                  onChange={(e) =>
-                    setPhotoFile(e.target.files?.[0] ?? null)
-                  }
+                  onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
                 />
               </Flex>
 
               <Text fontSize="sm" color="gray.500" mt={2}>
-                PNG, JPG o JPEG. Máx recomendado: 2MB.
+                PNG, JPG o JPEG. Recomendado &lt; 2MB.
               </Text>
             </FormControl>
 
@@ -162,6 +186,7 @@ export default function CreateCompanyTutorModal({
               colorScheme="blue"
               onClick={() => setConfirmOpen(true)}
               isLoading={loading}
+              isDisabled={!canSubmit}
             >
               Crear
             </Button>
@@ -195,6 +220,7 @@ export default function CreateCompanyTutorModal({
                 onClick={submitConfirmed}
                 ml={3}
                 isLoading={loading}
+                isDisabled={!canSubmit}
               >
                 Crear
               </Button>

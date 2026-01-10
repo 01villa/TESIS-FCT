@@ -13,8 +13,7 @@ object SchoolMapper {
         deletedAt = school.deletedAt,
         createdAt = school.createdAt,
         updatedAt = school.updatedAt,
-        photoUrl = school.logoUrl
-
-
+        photoUrl = school.logoUrl,
+        publicUrl = school.publicUrl
     )
 }

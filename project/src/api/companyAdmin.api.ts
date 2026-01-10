@@ -12,6 +12,7 @@ export const companyAdminApi = {
   return res.data;
 },
 
+
   delete: async (id: string) => {
     await axios.delete(`/admin/company-admins/${id}`);
   },
@@ -20,4 +21,10 @@ export const companyAdminApi = {
     const res = await axios.patch(`/admin/company-admins/${id}/restore`);
     return res.data;
   },
+
+  update: async (adminId: string, dto: any) => {
+  const res = await axios.put(`/admin/company-admins/${adminId}`, dto);
+  return res.data;
+}
+
 };

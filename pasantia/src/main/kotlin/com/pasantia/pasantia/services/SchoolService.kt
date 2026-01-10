@@ -26,11 +26,14 @@ class SchoolService(
         val school = School(
             name = dto.name,
             address = dto.address,
+            logoUrl = dto.logoUrl,
+            publicUrl = dto.publicUrl,
             active = true,
             deletedAt = null
         )
         return SchoolMapper.toDTO(schoolRepository.save(school))
     }
+
 
     /** ============================
      * LIST ACTIVE SCHOOLS

@@ -22,16 +22,37 @@ class StudentService(
     private val userRepository: UserRepository,
     private val roleRepository: RoleRepository,
     private val userRoleRepository: UserRoleRepository,
-    private val specialtyRepository: SpecialtyRepository, // 👈 NUEVO
+    private val specialtyRepository: SpecialtyRepository,
     private val passwordEncoder: PasswordEncoder,
     private val userService: UserService
 ) {
+
+    // ============================================================
+    // VALIDACIONES
+    // ============================================================
+    private fun validateCi(ci: String) {
+        // Solo números, 1 a 10 dígitos
+        if (!ci.matches(Regex("^\\d{1,10}$"))) {
+            throw IllegalArgumentException("CI must contain only numbers and max 10 digits")
+        }
+    }
+
+    private fun validatePhone(phone: String) {
+        // Solo números, 1 a 10 dígitos
+        if (!phone.matches(Regex("^\\d{1,10}$"))) {
+            throw IllegalArgumentException("Phone must contain only numbers and max 10 digits")
+        }
+    }
 
     // ============================================================
     // CREATE
     // ============================================================
     @Transactional
     fun createStudent(schoolId: UUID, dto: CreateStudentDTO): StudentDTO {
+
+        // ✅ Validación CI y phone
+        validateCi(dto.ci)
+        dto.phone?.let { validatePhone(it) }
 
         if (userRepository.existsByEmail(dto.email))
             throw IllegalArgumentException("Email already registered")
@@ -69,7 +90,7 @@ class StudentService(
         val student = Student(
             school = school,
             user = user,
-            specialty = specialty, // 👈 CONEXIÓN REAL
+            specialty = specialty,
             firstName = dto.firstName,
             lastName = dto.lastName,
             ci = dto.ci,
@@ -111,13 +132,18 @@ class StudentService(
 
         dto.firstName?.let { student.firstName = it }
         dto.lastName?.let { student.lastName = it }
+
         dto.ci?.let {
+            validateCi(it)
             validateCIUnique(student.id, it)
             student.ci = it
         }
-        dto.phone?.let { student.phone = it }
 
-        // 👉 cambio de especialidad (si viene)
+        dto.phone?.let {
+            validatePhone(it)
+            student.phone = it
+        }
+
         dto.specialtyId?.let {
             val specialty = specialtyRepository.findById(it)
                 .orElseThrow { IllegalArgumentException("Specialty not found") }

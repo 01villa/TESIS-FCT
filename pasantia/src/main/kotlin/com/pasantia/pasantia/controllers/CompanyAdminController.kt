@@ -1,6 +1,7 @@
 package com.pasantia.pasantia.controllers
 
 
+import com.pasantia.pasantia.dto.UpdateUserBasicDTO
 import com.pasantia.pasantia.services.CompanyAdminService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -40,7 +41,11 @@ class CompanyAdminController(
         service.delete(id)
         return ResponseEntity.noContent().build()
     }
-
+    @PutMapping("/{id}")
+    fun update(
+        @PathVariable id: UUID,
+        @RequestBody dto: UpdateUserBasicDTO
+    ) = ResponseEntity.ok(service.update(id, dto))
     // =========================
     // RESTORE
     // PATCH /admin/company-admins/{id}/restore

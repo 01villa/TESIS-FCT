@@ -25,7 +25,7 @@ import EditSchoolTutorModal from "./EditSchoolTutorModal";
 import CreateSchoolTutorModal from "./CreateSchoolTutorModal";
 
 import { ChevronDownIcon, ChevronUpIcon } from "@chakra-ui/icons";
-import { schoolTutorsApi } from "../../../api/schooltutor.api";
+import { schoolTutorsApi } from "../../../api/schoolTutor.api";
 import UserCell from "../../../components/UserCell";
 
 interface Filters {

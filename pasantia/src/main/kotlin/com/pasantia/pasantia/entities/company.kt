@@ -29,6 +29,9 @@ data class Company(
     @Column(name = "logo_url")
     var logoUrl: String? = null,
 
+    @Column(name = "public_url", length = 255)
+    var publicUrl: String? = null,
+
     @Column
     override var deletedAt: LocalDateTime? = null
 

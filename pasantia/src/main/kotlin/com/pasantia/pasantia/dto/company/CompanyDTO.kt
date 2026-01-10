@@ -11,6 +11,8 @@ data class CompanyDTO(
     val deletedAt: LocalDateTime?,
     val createdAt: LocalDateTime?,
     val updatedAt: LocalDateTime?,
-    val photoUrl: String?
+    val photoUrl: String?,
+    val publicUrl: String? = null
+
 
 )

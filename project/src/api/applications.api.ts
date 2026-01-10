@@ -44,4 +44,19 @@ export const applicationsApi = {
   // Restore
   restore: async (id: string) =>
     axios.patch(`/applications/${id}/restore`),
+  // Tutor empresa -> finalizar (marcar FINISHED)
+finish: async (id: string, finalFeedback?: string) => {
+  const res = await axios.patch(`/applications/${id}/finish`, {
+    finalFeedback: finalFeedback?.trim() ? finalFeedback.trim() : null,
+  });
+  return res.data;
+},
+
+
+// Tutor escolar -> calificar (marcar GRADED)
+grade: async (id: string, dto: { finalGrade: number; finalFeedback?: string }) => {
+  const res = await axios.patch(`/applications/${id}/grade`, dto);
+  return res.data;
+},
+
 };
